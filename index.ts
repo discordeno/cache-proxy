@@ -92,6 +92,7 @@ export function createProxyCache<
       // Remove from in memory as well
       bot.cache.messages.memory.forEach((message) => {
         if (message.channelId === id) bot.cache.messages.memory.delete(id);
+        bot.cache.messages.channelIDs.delete(id);
       });
 
       bot.cache.channels.memory.delete(id);
@@ -119,6 +120,8 @@ export function createProxyCache<
           });
         }
       }
+
+      bot.cache.roles.guildIDs.delete(id);
 
       // if members are stored outside guilds, then each member itself needs to remove the role id that was deleted.
       bot.cache.members.memory.forEach((member) => {
@@ -150,6 +153,7 @@ export function createProxyCache<
       for (const id of ids) {
         // delete directly from memory if stored separately.
         bot.cache.messages.memory.delete(id);
+        bot.cache.messages.channelIDs.delete(id);
       }
     };
   }
@@ -161,24 +165,34 @@ export function createProxyCache<
 
       // Remove any associated messages
       bot.cache.messages.memory.forEach((message) => {
-        if (message.guildID === id)
+        if (message.guildID === id) {
           bot.cache.messages.memory.delete(message.id);
+          bot.cache.messages.channelIDs.delete(message.id);
+        }
       });
 
       // Remove any associated channels
       bot.cache.channels.memory.forEach((channel) => {
-        if (channel.guildID === id)
+        if (channel.guildID === id) {
           bot.cache.channels.memory.delete(channel.id);
+          bot.cache.channels.guildIDs.delete(channel.id);
+        }
       });
 
       // Remove any associated roles
       bot.cache.roles.memory.forEach((role) => {
-        if (role.guildID === id) bot.cache.roles.memory.delete(role.id);
+        if (role.guildID === id) {
+          bot.cache.roles.memory.delete(role.id);
+          bot.cache.roles.guildIDs.delete(role.id);
+        }
       });
 
       // Remove any associated members
       bot.cache.members.memory.forEach((member) => {
-        if (member.guildID === id) bot.cache.members.memory.delete(member.id);
+        if (member.guildID === id) {
+          bot.cache.members.memory.delete(member.id);
+          bot.cache.members.guildIDs.delete(member.id);
+        }
       });
     };
   }
@@ -327,6 +341,7 @@ export function createProxyCache<
       bot.cache.guilds.memory
         .get(bot.cache.roles.guildIDs.get(roleID)!)
         ?.roles?.delete(roleID);
+      bot.cache.roles.guildIDs.delete(roleID);
       // Remove from non-memory cache
       if (options.removeItem) await options.removeItem("role", roleID);
     },
@@ -371,7 +386,8 @@ export function createProxyCache<
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.members) {
-        if (member.guildId) bot.cache.members.guildIDs.set(member.id, member.guildId);
+        if (member.guildId)
+          bot.cache.members.guildIDs.set(member.id, member.guildId);
 
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.members.guildIDs.get(member.id);
@@ -400,6 +416,7 @@ export function createProxyCache<
       bot.cache.guilds.memory
         .get(bot.cache.members.guildIDs.get(memberID)!)
         ?.members?.delete(memberID);
+      bot.cache.members.guildIDs.delete(memberID);
       // Remove from non-memory cache
       if (options.removeItem) await options.removeItem("member", memberID);
     },
@@ -444,7 +461,8 @@ export function createProxyCache<
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.channels) {
-        if (channel.guildId) bot.cache.channels.guildIDs.set(channel.id, channel.guildId);
+        if (channel.guildId)
+          bot.cache.channels.guildIDs.set(channel.id, channel.guildId);
 
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.channels.guildIDs.get(channel.id);
@@ -473,6 +491,7 @@ export function createProxyCache<
       bot.cache.guilds.memory
         .get(bot.cache.channels.guildIDs.get(channelID)!)
         ?.channels?.delete(channelID);
+      bot.cache.channels.guildIDs.delete(channelID);
       // Remove from non-memory cache
       if (options.removeItem) await options.removeItem("channel", channelID);
     },
@@ -518,7 +537,8 @@ export function createProxyCache<
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.messages) {
         if (options.cacheInMemory.guilds) {
-          if (message.channelId) bot.cache.messages.channelIDs.set(message.id, message.channelId);
+          if (message.channelId)
+            bot.cache.messages.channelIDs.set(message.id, message.channelId);
 
           const guildID = bot.cache.messages.channelIDs.get(message.id);
           if (guildID) {
@@ -546,6 +566,7 @@ export function createProxyCache<
       bot.cache.guilds.memory
         .get(bot.cache.messages.channelIDs.get(messageID)!)
         ?.messages?.delete(messageID);
+      bot.cache.messages.channelIDs.delete(messageID);
       // Remove from non-memory cache
       if (options.removeItem) await options.removeItem("message", messageID);
     },
@@ -583,17 +604,21 @@ export function createProxyCache<
     const guildId = bot.transformers.snowflake(payload.guild.id);
     // Make a raw guild object we can put in memory before running the old transformer which runs all the other transformers
     const preCacheGuild = {
-        toggles: new GuildToggles(payload.guild),
-        name: payload.guild.name,
-        memberCount: payload.guild.member_count ?? 0,
-        shardId: payload.shardId,
-        icon: payload.guild.icon ? bot.utils.iconHashToBigInt(payload.guild.icon) : undefined,
-        channels: new Collection<bigint, T["channel"]>(),
-        roles: new Collection<bigint, T["role"]>(),
-        id: guildId,
-        // WEIRD EDGE CASE WITH BOT CREATED SERVERS
-        ownerId: payload.guild.owner_id ? bot.transformers.snowflake(payload.guild.owner_id) : 0n,
-        lastInteractedTime: Date.now(),
+      toggles: new GuildToggles(payload.guild),
+      name: payload.guild.name,
+      memberCount: payload.guild.member_count ?? 0,
+      shardId: payload.shardId,
+      icon: payload.guild.icon
+        ? bot.utils.iconHashToBigInt(payload.guild.icon)
+        : undefined,
+      channels: new Collection<bigint, T["channel"]>(),
+      roles: new Collection<bigint, T["role"]>(),
+      id: guildId,
+      // WEIRD EDGE CASE WITH BOT CREATED SERVERS
+      ownerId: payload.guild.owner_id
+        ? bot.transformers.snowflake(payload.guild.owner_id)
+        : 0n,
+      lastInteractedTime: Date.now(),
     };
 
     // CACHE DIRECT TO MEMORY BECAUSE OTHER TRANSFORMERS NEED THE GUILD IN CACHE
