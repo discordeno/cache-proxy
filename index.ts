@@ -198,7 +198,7 @@ export function createProxyCache<
     },
     set: async function (guild: T["guild"]): Promise<void> {
       // Should this be cached or not?
-      if (!(await options.shouldCache.guild?.(guild))) return;
+      if (!(await options.shouldCache?.guild?.(guild))) return;
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.guilds)
         bot.cache.guilds.memory.set(guild.id, guild);
@@ -234,6 +234,8 @@ export function createProxyCache<
       return stored;
     },
     set: async function (user: T["user"]): Promise<void> {
+      if (!(await options.shouldCache?.user?.(user))) return;
+
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.users)
         bot.cache.users.memory.set(user.id, user);
@@ -281,6 +283,8 @@ export function createProxyCache<
       return stored;
     },
     set: async function (role: T["role"]): Promise<void> {
+      if (!(await options.shouldCache?.role?.(role))) return;
+
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.roles) {
         if (options.cacheInMemory.guilds) {
@@ -345,6 +349,8 @@ export function createProxyCache<
       return stored;
     },
     set: async function (member: T["member"]): Promise<void> {
+      if (!(await options.shouldCache?.member?.(member))) return;
+
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.members) {
         if (options.cacheInMemory.guilds) {
@@ -410,6 +416,8 @@ export function createProxyCache<
       return stored;
     },
     set: async function (channel: T["channel"]): Promise<void> {
+      if (!(await options.shouldCache?.channel?.(channel))) return;
+
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.channels) {
         if (options.cacheInMemory.guilds) {
@@ -475,6 +483,8 @@ export function createProxyCache<
       return stored;
     },
     set: async function (message: T["message"]): Promise<void> {
+      if (!(await options.shouldCache?.message?.(message))) return;
+
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.messages) {
         if (options.cacheInMemory.guilds) {
@@ -673,19 +683,19 @@ export type ProxyCacheTypes = {
 
 export interface CreateProxyCacheOptions {
   /** Configure the handlers that should be ran whenever something is about to be cached to determine whether it should or should not be cached. */
-  shouldCache: {
+  shouldCache?: {
     /** Handler to check whether or not to cache this guild. */
-    guild: (guild: Guild) => Promise<boolean>;
+    guild?: (guild: Guild) => Promise<boolean>;
     /** Handler to check whether or not to cache this user. */
-    user: (user: User) => Promise<boolean>;
+    user?: (user: User) => Promise<boolean>;
     /** Handler to check whether or not to cache this channel. */
-    channel: (channel: Channel) => Promise<boolean>;
+    channel?: (channel: Channel) => Promise<boolean>;
     /** Handler to check whether or not to cache this member. */
-    member: (member: Member) => Promise<boolean>;
+    member?: (member: Member) => Promise<boolean>;
     /** Handler to check whether or not to cache this role. */
-    role: (role: Role) => Promise<boolean>;
+    role?: (role: Role) => Promise<boolean>;
     /** Handler to check whether or not to cache this message. */
-    message: (message: Message) => Promise<boolean>;
+    message?: (message: Message) => Promise<boolean>;
   };
   /** Configure the exact properties you wish to have in each object. */
   desiredProps?: {
