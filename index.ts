@@ -198,7 +198,7 @@ export function createProxyCache<
     },
     set: async function (guild: T["guild"]): Promise<void> {
       // Should this be cached or not?
-      if (!(await options.shouldCache?.guild?.(guild))) return;
+      if (options.shouldCache?.guild && !(await options.shouldCache.guild(guild))) return;
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.guilds)
         bot.cache.guilds.memory.set(guild.id, guild);
@@ -234,7 +234,7 @@ export function createProxyCache<
       return stored;
     },
     set: async function (user: T["user"]): Promise<void> {
-      if (!(await options.shouldCache?.user?.(user))) return;
+      if (options.shouldCache?.user && !(await options.shouldCache.user(user))) return;
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.users)
@@ -283,7 +283,7 @@ export function createProxyCache<
       return stored;
     },
     set: async function (role: T["role"]): Promise<void> {
-      if (!(await options.shouldCache?.role?.(role))) return;
+      if (options.shouldCache?.role && !(await options.shouldCache.role(role))) return;
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.roles) {
@@ -349,7 +349,7 @@ export function createProxyCache<
       return stored;
     },
     set: async function (member: T["member"]): Promise<void> {
-      if (!(await options.shouldCache?.member?.(member))) return;
+      if (options.shouldCache?.member && !(await options.shouldCache.member(member))) return;
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.members) {
@@ -416,7 +416,7 @@ export function createProxyCache<
       return stored;
     },
     set: async function (channel: T["channel"]): Promise<void> {
-      if (!(await options.shouldCache?.channel?.(channel))) return;
+      if (options.shouldCache?.channel && !(await options.shouldCache.channel(channel))) return;
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.channels) {
@@ -483,7 +483,7 @@ export function createProxyCache<
       return stored;
     },
     set: async function (message: T["message"]): Promise<void> {
-      if (!(await options.shouldCache?.message?.(message))) return;
+      if (options.shouldCache?.message && !(await options.shouldCache.message(message))) return;
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.messages) {
