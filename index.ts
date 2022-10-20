@@ -29,41 +29,41 @@ export interface ProxyCacheProps<T extends ProxyCacheTypes> {
     guilds: {
       memory: Collection<bigint, T["guild"]>;
       get: (id: bigint) => Promise<T["guild"] | undefined>;
-      set: (id: bigint, value: T["guild"]) => Promise<void>;
+      set: (value: T["guild"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
     channels: {
       guildIDs: Collection<bigint, bigint>;
       memory: Collection<bigint, T["channel"]>;
       get: (id: bigint) => Promise<T["channel"] | undefined>;
-      set: (id: bigint, value: T["channel"]) => Promise<void>;
+      set: (value: T["channel"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
     roles: {
       guildIDs: Collection<bigint, bigint>;
       memory: Collection<bigint, T["role"]>;
       get: (id: bigint) => Promise<T["role"] | undefined>;
-      set: (id: bigint, value: T["role"]) => Promise<void>;
+      set: (value: T["role"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
     members: {
       guildIDs: Collection<bigint, bigint>;
       memory: Collection<bigint, T["member"]>;
       get: (id: bigint) => Promise<T["member"] | undefined>;
-      set: (id: bigint, value: T["member"]) => Promise<void>;
+      set: (value: T["member"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
     messages: {
       channelIDs: Collection<bigint, bigint>;
       memory: Collection<bigint, T["message"]>;
       get: (id: bigint) => Promise<T["message"] | undefined>;
-      set: (id: bigint, value: T["message"]) => Promise<void>;
+      set: (value: T["message"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
     users: {
       memory: Collection<bigint, T["user"]>;
       get: (id: bigint) => Promise<T["user"] | undefined>;
-      set: (id: bigint, value: T["user"]) => Promise<void>;
+      set: (value: T["user"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
   };
@@ -594,7 +594,7 @@ export function createProxyCache<
     }
 
     // Add to memory
-    bot.cache.users.set(old.id, args);
+    bot.cache.users.set(args);
 
     return args;
   };
@@ -642,7 +642,7 @@ export function createProxyCache<
     }
 
     // Add to memory
-    bot.cache.guilds.set(old.id, args);
+    bot.cache.guilds.set(args);
 
     return args;
   };
@@ -666,7 +666,7 @@ export function createProxyCache<
     }
 
     // Add to memory
-    bot.cache.channels.set(old.id, args);
+    bot.cache.channels.set(args);
 
     return args;
   };
@@ -690,7 +690,7 @@ export function createProxyCache<
     }
 
     // Add to memory
-    bot.cache.members.set(old.id, args);
+    bot.cache.members.set(args);
 
     return args;
   };
@@ -714,7 +714,7 @@ export function createProxyCache<
     }
 
     // Add to memory
-    bot.cache.roles.set(old.id, args);
+    bot.cache.roles.set(args);
 
     return args;
   };
@@ -738,7 +738,7 @@ export function createProxyCache<
     }
 
     // Add to memory
-    bot.cache.messages.set(old.id, args);
+    bot.cache.messages.set(args);
 
     return args;
   };
