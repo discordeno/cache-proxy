@@ -629,7 +629,9 @@ export function createProxyCache<
     const old = guild(bot, payload);
 
     // Filter to desired args
-    const args: T["guild"] = preCacheGuild;
+    const args: T["guild"] = {
+      members: new Collection(),
+    };
     const keys = Object.keys(old) as (keyof Guild)[];
 
     for (const key of keys) {
