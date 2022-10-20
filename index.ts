@@ -651,6 +651,7 @@ export function createProxyCache<
   bot.transformers.channel = function (_, payload) {
     // Create the object from existing transformer.
     const old = channel(bot, payload);
+    old.messages = new Collection();
 
     // Filter to desired args
     const args: T["channel"] = {};
@@ -893,3 +894,10 @@ export interface CreateProxyCacheOptions {
 // });
 
 // await proxy.cache.guilds.get(0n);
+
+declare module "discordeno" {
+  interface Channel {
+    /** The messages that are available in this channel. */
+    messages: Collection<bigint, Message>;
+  }
+}
