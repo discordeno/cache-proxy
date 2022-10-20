@@ -289,8 +289,8 @@ export function createProxyCache<
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.roles.guildIDs.get(roleID);
           if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID);
-            if (guild) return guild;
+            const role = bot.cache.guilds.memory.get(guildID)?.roles?.get(roleID);
+            if (role) return role;
           }
         } else if (bot.cache.roles.memory.has(roleID)) {
           // Check if its in memory outside of guilds
@@ -360,8 +360,8 @@ export function createProxyCache<
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.members.guildIDs.get(memberID);
           if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID);
-            if (guild) return guild;
+            const member = bot.cache.guilds.memory.get(guildID)?.members?.get(memberID);
+            if (member) return member;
           }
         } else if (bot.cache.members.memory.has(memberID)) {
           // Check if its in memory outside of guilds
@@ -435,8 +435,12 @@ export function createProxyCache<
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.channels.guildIDs.get(channelID);
           if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID);
-            if (guild) return guild;
+            const channel = bot.cache.guilds.memory.get(guildID)?.channels?.get(channelID);
+            if (channel) return channel;
+          } else {
+            // Return from cache.channels if this channel isn't in a guild
+            const channel = bot.cache.channels.memory.get(channelID);
+            if (channel) return channel;
           }
         } else if (bot.cache.channels.memory.has(channelID)) {
           // Check if its in memory outside of guilds
