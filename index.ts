@@ -439,7 +439,8 @@ export function createProxyCache<
             if (channel) return channel;
           } else {
             // Return from cache.channels if this channel isn't in a guild
-            return bot.cache.channels.memory.get(channelID);
+            const channel = bot.cache.channels.memory.get(channelID);
+            if (channel) return channel;
           }
         } else if (bot.cache.channels.memory.has(channelID)) {
           // Check if its in memory outside of guilds
