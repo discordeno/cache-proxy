@@ -508,13 +508,21 @@ export function createProxyCache<
       if (options.cacheInMemory.messages) {
         // If guilds are cached, messages will be inside them
         if (options.cacheInMemory.guilds) {
-          const guildID = bot.cache.messages.channelIDs.get(messageID);
-          if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID);
-            if (guild) return guild;
+          const channelID = bot.cache.messages.channelIDs.get(messageID);
+          if (channelID) {
+            const guildID = bot.cache.channels.guildIDs.get(channelID);
+            const channel =
+              bot.cache.guilds.memory.get(guildID!)?.channel ??
+              bot.cache.channels.memory.get(channelID);
+            if (channel) {
+              const message = channel.messages.cache.get(messageID);
+              if (message) return message;
+            }
           }
-        } else if (bot.cache.messages.memory.has(messageID)) {
-          // Check if its in memory outside of guilds
+        }
+
+        // Check if its in memory outside of guilds
+        if (bot.cache.messages.memory.has(messageID)) {
           return bot.cache.messages.memory.get(messageID);
         }
       }
