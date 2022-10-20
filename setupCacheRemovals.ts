@@ -27,7 +27,7 @@ export function setupCacheRemovals<B extends Bot>(
     const id = bot.transformers.snowflake(payload.id);
 
     // Remove the guild from cache
-    bot.cache.options.bulk.removeGuild(id);
+    bot.cache.options.bulk?.removeGuild?.(id);
 
     GUILD_DELETE(bot, data, shardId);
   };
@@ -38,7 +38,7 @@ export function setupCacheRemovals<B extends Bot>(
     CHANNEL_DELETE(bot, data, shardId);
 
     const id = bot.transformers.snowflake(payload.id);
-    bot.cache.options.bulk.removeChannel(id);
+    bot.cache.options.bulk?.removeChannel?.(id);
   };
 
   bot.handlers.GUILD_MEMBER_REMOVE = function (_, data, shardId) {
@@ -99,7 +99,7 @@ export function setupCacheRemovals<B extends Bot>(
     const payload = data.d as DiscordMessageDeleteBulk;
 
     // i have headaches, i need a break
-    bot.cache.options.bulk.removeMessages(payload.ids.map(id => bot.transformers.snowflake(id)));
+    bot.cache.options.bulk?.removeMessages?.(payload.ids.map(id => bot.transformers.snowflake(id)));
 
     MESSAGE_DELETE_BULK(bot, data, shardId);
   };
@@ -108,7 +108,7 @@ export function setupCacheRemovals<B extends Bot>(
     const payload = data.d as DiscordGuildRoleDelete;
     const id = bot.transformers.snowflake(payload.role_id);
 
-    bot.cache.options.bulk.removeRole(id);
+    bot.cache.options.bulk?.removeRole?.(id);
 
     GUILD_ROLE_DELETE(bot, data, shardId);
   };

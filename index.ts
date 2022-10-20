@@ -84,6 +84,7 @@ export function createProxyCache<
 
   bot.cache.options = options;
 
+  if (!bot.cache.options.bulk) bot.cache.options.bulk = {};
   // If user did not provide a bulk remover
   if (!bot.cache.options.bulk.removeChannel) {
     bot.cache.options.bulk.removeChannel = async function (id) {
@@ -218,7 +219,7 @@ export function createProxyCache<
       // Remove from memory
       bot.cache.guilds.memory.delete(guildID);
       // Remove from non-memory cache
-      await options.bulk.removeGuild(guildID);
+      await options.bulk?.removeGuild?.(guildID);
     },
   };
 
@@ -794,15 +795,15 @@ export interface CreateProxyCacheOptions {
     table: "guild" | "channel" | "role" | "member" | "message" | "user",
     id: bigint
   ) => Promise<unknown>;
-  bulk: {
+  bulk?: {
     /** Handler used to remove multiple objects in bulk. Instead of making hundreds of queries, you can optimize here using your preferred form. For example, when a guild is deleted, you want to make sure all channels, roles, messages and members are removed as well. */
-    removeGuild: (id: bigint) => Promise<unknown>;
+    removeGuild?: (id: bigint) => Promise<unknown>;
     /** Handler used to remove multiple objects in bulk. Instead of making hundreds of queries, you can optimize here using your preferred form. For example, when a channel is deleted, you want to make sure all messages are removed as well. */
-    removeChannel: (id: bigint) => Promise<unknown>;
+    removeChannel?: (id: bigint) => Promise<unknown>;
     /** Handler used to remove multiple objects in bulk. Instead of making hundreds of queries, you can optimize here using your preferred form. For example, when a role is deleted, you want to make sure all members who have this role are edited as well. */
-    removeRole: (id: bigint) => Promise<unknown>;
+    removeRole?: (id: bigint) => Promise<unknown>;
     /** Handler used to remove multiple messages. */
-    removeMessages: (ids: bigint[]) => Promise<unknown>;
+    removeMessages?: (ids: bigint[]) => Promise<unknown>;
   };
 }
 
