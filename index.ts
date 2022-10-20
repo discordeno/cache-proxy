@@ -298,6 +298,8 @@ export function createProxyCache<
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.roles) {
+        if (role.guildId) bot.cache.roles.guildIDs.set(role.id, role.guildId);
+
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.roles.guildIDs.get(role.id);
           if (guildID) {
@@ -369,6 +371,8 @@ export function createProxyCache<
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.members) {
+        if (member.guildId) bot.cache.members.guildIDs.set(member.id, member.guildId);
+
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.members.guildIDs.get(member.id);
           if (guildID) {
@@ -440,6 +444,8 @@ export function createProxyCache<
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.channels) {
+        if (channel.guildId) bot.cache.channels.guildIDs.set(channel.id, channel.guildId);
+
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.channels.guildIDs.get(channel.id);
           if (guildID) {
@@ -512,6 +518,8 @@ export function createProxyCache<
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.messages) {
         if (options.cacheInMemory.guilds) {
+          if (message.channelId) bot.cache.messages.channelIDs.set(message.id, message.channelId);
+
           const guildID = bot.cache.messages.channelIDs.get(message.id);
           if (guildID) {
             const guild = bot.cache.guilds.memory.get(guildID);
