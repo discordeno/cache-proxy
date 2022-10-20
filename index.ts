@@ -613,6 +613,7 @@ export function createProxyCache<
         : undefined,
       channels: new Collection<bigint, T["channel"]>(),
       roles: new Collection<bigint, T["role"]>(),
+      members: new Collection<bigint, T["member"]>(),
       id: guildId,
       // WEIRD EDGE CASE WITH BOT CREATED SERVERS
       ownerId: payload.guild.owner_id
