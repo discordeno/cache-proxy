@@ -18,6 +18,7 @@ import {
   Role,
   Channel,
   Message,
+  GuildToggles,
 } from "discordeno";
 import { setupCacheEdits } from "./setupCacheEdits";
 import { setupCacheRemovals } from "./setupCacheRemovals";
@@ -570,6 +571,26 @@ export function createProxyCache<
   };
 
   bot.transformers.guild = function (_, payload) {
+    // Get the guild id in bigint
+    const guildId = bot.transformers.snowflake(payload.guild.id);
+    // Make a raw guild object we can put in memory before running the old transformer which runs all the other transformers
+    const preCacheGuild = {
+        toggles: new GuildToggles(payload.guild),
+        name: payload.guild.name,
+        memberCount: payload.guild.member_count ?? 0,
+        shardId: payload.shardId,
+        icon: payload.guild.icon ? bot.utils.iconHashToBigInt(payload.guild.icon) : undefined,
+        channels: new Collection<bigint, T["channel"]>(),
+        roles: new Collection<bigint, T["role"]>(),
+        id: guildId,
+        // WEIRD EDGE CASE WITH BOT CREATED SERVERS
+        ownerId: payload.guild.owner_id ? bot.transformers.snowflake(payload.guild.owner_id) : 0n,
+        lastInteractedTime: Date.now(),
+    };
+
+    // CACHE DIRECT TO MEMORY BECAUSE OTHER TRANSFORMERS NEED THE GUILD IN CACHE
+    bot.cache.guilds.memory.set(preCacheGuild.id, preCacheGuild);
+
     // Create the object from existing transformer.
     const old = guild(bot, payload);
 
