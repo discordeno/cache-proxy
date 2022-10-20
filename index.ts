@@ -12,7 +12,6 @@ import {
   BigString,
   Bot,
   Collection,
-  createBot,
   User,
   Member,
   Guild,
@@ -110,9 +109,9 @@ export function createProxyCache<
           // if roles are stored inside the guild remove it
           guild.roles?.delete(id);
           // Each memwho has this role needs to be edited and the role id removed
-          guild.members?.forEach((member) => {
+          guild.members?.forEach((member: { roles: bigint[]; }) => {
             if (member.roles?.includes(id))
-              member.roles = member.roles.filter((roleID) => roleID !== id);
+              member.roles = member.roles.filter((roleID: bigint) => roleID !== id);
           });
         }
       }
@@ -120,7 +119,7 @@ export function createProxyCache<
       // if members are stored outside guilds, then each member itself needs to remove the role id that was deleted.
       bot.cache.members.memory.forEach((member) => {
         if (member.roles?.includes(id))
-          member.roles = member.roles.filter((roleID) => roleID !== id);
+          member.roles = member.roles.filter((roleID: bigint) => roleID !== id);
       });
     };
   }
@@ -182,7 +181,7 @@ export function createProxyCache<
 
   bot.cache.guilds = {
     memory: new Collection<bigint, T["guild"]>(),
-    get: async function (id: BigString): Promise<T["guild"]> {
+    get: async function (id: BigString): Promise<T["guild"] | undefined> {
       // Force into bigint form
       const guildID = BigInt(id);
 
@@ -190,12 +189,12 @@ export function createProxyCache<
       if (options.cacheInMemory.guilds && bot.cache.guilds.memory.has(guildID))
         return bot.cache.guilds.memory.get(guildID);
       // Otherwise try to get from non-memory cache
-      if (options.cacheOutsideMemory.guilds) {
-        const stored = await options.getItem<T["guild"]>("guild", guildID);
-        if (stored && options.cacheInMemory.guilds)
-          bot.cache.guilds.memory.set(guildID, stored);
-        return stored;
-      }
+      if (!options.cacheOutsideMemory.guilds) return;
+
+      const stored = await options.getItem<T["guild"]>("guild", guildID);
+      if (stored && options.cacheInMemory.guilds)
+        bot.cache.guilds.memory.set(guildID, stored);
+      return stored;
     },
     set: async function (guild: T["guild"]): Promise<void> {
       // Should this be cached or not?
@@ -219,7 +218,7 @@ export function createProxyCache<
 
   bot.cache.users = {
     memory: new Collection<bigint, T["user"]>(),
-    get: async function (id: BigString): Promise<T["user"]> {
+    get: async function (id: BigString): Promise<T["user"] | undefined> {
       // Force into bigint form
       const userID = BigInt(id);
 
@@ -227,12 +226,12 @@ export function createProxyCache<
       if (options.cacheInMemory.users && bot.cache.users.memory.has(userID))
         return bot.cache.users.memory.get(userID);
       // Otherwise try to get from non-memory cache
-      if (options.cacheOutsideMemory.users) {
-        const stored = await options.getItem<T["user"]>("user", userID);
-        if (stored && options.cacheInMemory.users)
-          bot.cache.users.memory.set(userID, stored);
-        return stored;
-      }
+      if (!options.cacheOutsideMemory.users) return;
+
+      const stored = await options.getItem<T["user"]>("user", userID);
+      if (stored && options.cacheInMemory.users)
+        bot.cache.users.memory.set(userID, stored);
+      return stored;
     },
     set: async function (user: T["user"]): Promise<void> {
       // If user wants memory cache, we cache it
@@ -254,7 +253,7 @@ export function createProxyCache<
   bot.cache.roles = {
     guildIDs: new Collection<bigint, bigint>(),
     memory: new Collection<bigint, T["role"]>(),
-    get: async function (id: BigString): Promise<T["role"]> {
+    get: async function (id: BigString): Promise<T["role"] | undefined> {
       // Force into bigint form
       const roleID = BigInt(id);
 
@@ -274,12 +273,12 @@ export function createProxyCache<
       }
 
       // Otherwise try to get from non-memory cache
-      if (options.cacheOutsideMemory.roles) {
-        const stored = await options.getItem<T["role"]>("role", roleID);
-        if (stored && options.cacheInMemory.roles)
-          bot.cache.roles.memory.set(roleID, stored);
-        return stored;
-      }
+      if (!options.cacheOutsideMemory.roles) return;
+
+      const stored = await options.getItem<T["role"]>("role", roleID);
+      if (stored && options.cacheInMemory.roles)
+        bot.cache.roles.memory.set(roleID, stored);
+      return stored;
     },
     set: async function (role: T["role"]): Promise<void> {
       // If user wants memory cache, we cache it
@@ -318,7 +317,7 @@ export function createProxyCache<
   bot.cache.members = {
     guildIDs: new Collection<bigint, bigint>(),
     memory: new Collection<bigint, T["member"]>(),
-    get: async function (id: BigString): Promise<T["member"]> {
+    get: async function (id: BigString): Promise<T["member"] | undefined> {
       // Force into bigint form
       const memberID = BigInt(id);
 
@@ -338,12 +337,12 @@ export function createProxyCache<
       }
 
       // Otherwise try to get from non-memory cache
-      if (options.cacheOutsideMemory.members) {
-        const stored = await options.getItem<T["member"]>("member", memberID);
-        if (stored && options.cacheInMemory.members)
-          bot.cache.members.memory.set(memberID, stored);
-        return stored;
-      }
+      if (!options.cacheOutsideMemory.members) return;
+
+      const stored = await options.getItem<T["member"]>("member", memberID);
+      if (stored && options.cacheInMemory.members)
+        bot.cache.members.memory.set(memberID, stored);
+      return stored;
     },
     set: async function (member: T["member"]): Promise<void> {
       // If user wants memory cache, we cache it
@@ -383,7 +382,7 @@ export function createProxyCache<
   bot.cache.channels = {
     guildIDs: new Collection<bigint, bigint>(),
     memory: new Collection<bigint, T["channel"]>(),
-    get: async function (id: BigString): Promise<T["channel"]> {
+    get: async function (id: BigString): Promise<T["channel"] | undefined> {
       // Force into bigint form
       const channelID = BigInt(id);
 
@@ -403,12 +402,12 @@ export function createProxyCache<
       }
 
       // Otherwise try to get from non-memory cache
-      if (options.cacheOutsideMemory.channels) {
-        const stored = await options.getItem<T["channel"]>("channel", channelID);
-        if (stored && options.cacheInMemory.channels)
-          bot.cache.channels.memory.set(channelID, stored);
-        return stored;
-      }
+      if (!options.cacheOutsideMemory.channels) return;
+
+      const stored = await options.getItem<T["channel"]>("channel", channelID);
+      if (stored && options.cacheInMemory.channels)
+        bot.cache.channels.memory.set(channelID, stored);
+      return stored;
     },
     set: async function (channel: T["channel"]): Promise<void> {
       // If user wants memory cache, we cache it
@@ -448,7 +447,7 @@ export function createProxyCache<
   bot.cache.messages = {
     channelIDs: new Collection<bigint, bigint>(),
     memory: new Collection<bigint, T["message"]>(),
-    get: async function (id: BigString): Promise<T["message"]> {
+    get: async function (id: BigString): Promise<T["message"] | undefined> {
       // Force into bigint form
       const messageID = BigInt(id);
 
@@ -468,12 +467,12 @@ export function createProxyCache<
       }
 
       // Otherwise try to get from non-memory cache
-      if (options.cacheOutsideMemory.messages) {
-        const stored = await options.getItem<T["message"]>("message", messageID);
-        if (stored && options.cacheInMemory.messages)
-          bot.cache.messages.memory.set(messageID, stored);
-        return stored;
-      }
+      if (!options.cacheOutsideMemory.messages) return;
+
+      const stored = await options.getItem<T["message"]>("message", messageID);
+      if (stored && options.cacheInMemory.messages)
+        bot.cache.messages.memory.set(messageID, stored);
+      return stored;
     },
     set: async function (message: T["message"]): Promise<void> {
       // If user wants memory cache, we cache it
@@ -775,7 +774,7 @@ export interface CreateProxyCacheOptions {
   };
 }
 
-const bot = createBot({ token: "" });
+// const bot = createBot({ token: "" });
 // const proxy = createProxyCache(bot, {
 //   undesiredProps: {
 //     users: ["email"],
