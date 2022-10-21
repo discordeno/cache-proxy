@@ -198,7 +198,7 @@ export function createProxyCache<
       // If replaceInternalBulkRemover.channel is not set to true, run internal channel bulk remover
       if (!replaceInternalBulkRemover?.channel) await internalBulkRemover.removeChannel(id);
       // If user passed bulk.removeChannel, run passed bulk remover
-      if (bulk.removeChannel) await bulk.removeChannel(id);
+      await bulk.removeChannel?.(id);
     }
   }
 
@@ -208,7 +208,7 @@ export function createProxyCache<
       // If replaceInternalBulkRemover.role is not set to true, run internal role bulk remover
       if (!replaceInternalBulkRemover?.role) await internalBulkRemover.removeRole(id);
       // If user passed bulk.removeRole, run passed bulk remover
-      if (bulk.removeRole) await bulk.removeRole(id);
+      await bulk.removeRole?.(id);
     }
   }
 
@@ -218,7 +218,7 @@ export function createProxyCache<
       // If replaceInternalBulkRemover.message is not set to true, run internal messages bulk remover
       if (!replaceInternalBulkRemover?.messages) await internalBulkRemover.removeMessages(id);
       // If user passed bulk.removeMessages, run passed bulk remover
-      if (bulk.removeMessages) await bulk.removeMessages(id);
+      await bulk.removeMessages?.(id);
     }
   }
 
@@ -228,7 +228,7 @@ export function createProxyCache<
       // If replaceInternalBulkRemover.guild is not set to true, run internal guild bulk remover
       if (!replaceInternalBulkRemover?.guild) await internalBulkRemover.removeGuild(id);
       // If user passed bulk.removeGuild, run passed bulk remover
-      if (bulk.removeGuild) await bulk.removeGuild(id);
+      await bulk.removeGuild?.(id);
     }
   }
 
