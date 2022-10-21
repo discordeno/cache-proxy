@@ -85,22 +85,17 @@ export function createProxyCache<
 
   bot.cache.options = options;
 
-  if (!bot.cache.options.bulk) bot.cache.options.bulk = {};
-  // If user did not provide a bulk remover
-  if (!bot.cache.options.bulk.removeChannel) {
-    bot.cache.options.bulk.removeChannel = async function (id) {
+  const internalBulkRemover = {
+    removeChannel: async function (id: bigint) {
       // Remove from in memory as well
       bot.cache.messages.memory.forEach((message) => {
         if (message.channelId === id) bot.cache.messages.memory.delete(id);
         bot.cache.messages.channelIDs.delete(id);
       });
-
+  
       bot.cache.channels.memory.delete(id);
-    };
-  }
-
-  if (!bot.cache.options.bulk.removeRole) {
-    bot.cache.options.bulk.removeRole = async function (id) {
+    },
+    removeRole: async function (id: bigint) {
       // Delete the role itself if it exists
       bot.cache.roles.memory.delete(id);
 
@@ -128,11 +123,8 @@ export function createProxyCache<
         if (member.roles?.includes(id))
           member.roles = member.roles.filter((roleID: bigint) => roleID !== id);
       });
-    };
-  }
-
-  if (!bot.cache.options.bulk.removeMessages) {
-    bot.cache.options.bulk.removeMessages = async function (ids) {
+    },
+    removeMessages: async function (ids: bigint[]) {
       const channelID = ids.find((id) => bot.cache.messages.channelIDs.get(id));
       if (channelID) {
         const guildID = bot.cache.channels.guildIDs.get(channelID);
@@ -155,11 +147,8 @@ export function createProxyCache<
         bot.cache.messages.memory.delete(id);
         bot.cache.messages.channelIDs.delete(id);
       }
-    };
-  }
-
-  if (!bot.cache.options.bulk.removeGuild) {
-    bot.cache.options.bulk.removeGuild = async function (id) {
+    },
+    removeGuild: async function (id: bigint) {
       // Remove from memory
       bot.cache.guilds.memory.delete(id);
 
@@ -194,7 +183,53 @@ export function createProxyCache<
           bot.cache.members.guildIDs.delete(member.id);
         }
       });
-    };
+    },
+  };
+
+  if (!bot.cache.options.bulk) bot.cache.options.bulk = {};
+
+  // Get bulk removers passed by user, data about which internal removers to replace
+  const { bulk } = bot.cache.options;
+  const { replaceInternalBulkRemover } = bulk;
+
+  // If user passed bulk.removeChannel else if replaceInternalBulkRemover.channel is not set to true
+  if (bulk.removeChannel || !replaceInternalBulkRemover?.channel) {
+    bot.cache.options.bulk.removeChannel = async function (id) {
+      // If replaceInternalBulkRemover.channel is not set to true, run internal channel bulk remover
+      if (!replaceInternalBulkRemover?.channel) await internalBulkRemover.removeChannel(id);
+      // If user passed bulk.removeChannel, run passed bulk remover
+      if (bulk.removeChannel) await bulk.removeChannel(id);
+    }
+  }
+
+  // If user passed bulk.removeRole else if replaceInternalBulkRemover.role is not set to true
+  if (bulk.removeRole || !replaceInternalBulkRemover?.role) {
+    bot.cache.options.bulk.removeRole = async function (id) {
+      // If replaceInternalBulkRemover.role is not set to true, run internal role bulk remover
+      if (!replaceInternalBulkRemover?.role) await internalBulkRemover.removeRole(id);
+      // If user passed bulk.removeRole, run passed bulk remover
+      if (bulk.removeRole) await bulk.removeRole(id);
+    }
+  }
+
+  // If user passed bulk.removeMessages else if replaceInternalBulkRemover.message is not set to true
+  if (bulk.removeMessages || !replaceInternalBulkRemover?.messages) {
+    bot.cache.options.bulk.removeMessages = async function (id) {
+      // If replaceInternalBulkRemover.message is not set to true, run internal messages bulk remover
+      if (!replaceInternalBulkRemover?.messages) await internalBulkRemover.removeMessages(id);
+      // If user passed bulk.removeMessages, run passed bulk remover
+      if (bulk.removeMessages) await bulk.removeMessages(id);
+    }
+  }
+
+  // If user passed bulk.removeGuild else if replaceInternalBulkRemover.guild is not set to true
+  if (bulk.removeGuild || !replaceInternalBulkRemover?.guild) {
+    bot.cache.options.bulk.removeGuild = async function (id) {
+      // If replaceInternalBulkRemover.guild is not set to true, run internal guild bulk remover
+      if (!replaceInternalBulkRemover?.guild) await internalBulkRemover.removeGuild(id);
+      // If user passed bulk.removeGuild, run passed bulk remover
+      if (bulk.removeGuild) await bulk.removeGuild(id);
+    }
   }
 
   bot.cache.guilds = {
@@ -874,6 +909,29 @@ export interface CreateProxyCacheOptions {
     removeRole?: (id: bigint) => Promise<unknown>;
     /** Handler used to remove multiple messages. */
     removeMessages?: (ids: bigint[]) => Promise<unknown>;
+    /** Options to choose whether or not to replace internal removers. */
+    replaceInternalBulkRemover?: {
+      /** Whether or not to replace internal guild remover.
+       * 
+       * By default, the proxy will bulk remove guilds from memory. You can override this behavior by setting this option to `true`.
+       */
+      guild?: boolean;
+      /** Whether or not to replace internal channel remover.
+       * 
+       * By default, the proxy will bulk remove channel from memory. You can override this behavior by setting this option to `true`.
+       */
+      channel?: boolean;
+      /** Whether or not to replace internal role remover.
+       * 
+       * By default, the proxy will bulk remove role from memory. You can override this behavior by setting this option to `true`.
+       */
+      role?: boolean;
+      /** Whether or not to replace internal message remover.
+       * 
+       * By default, the proxy will bulk remove message from memory. You can override this behavior by setting this option to `true`.
+       */
+      messages?: boolean;
+    }
   };
 }
 
