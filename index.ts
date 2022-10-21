@@ -387,7 +387,7 @@ export function createProxyCache<
             if (guild) guild.members.set(member.id, member);
             else
               console.warn(
-                `[CACHE] Can't cache member(${member.id}) since guild.members is enabled but a guild (${guildID}) was not found`
+                `[CACHE] Can't cache member(${member.id}) since guild.members is enabled but a guild (${member.guildId}) was not found`
               );
           } else
             console.warn(
@@ -397,7 +397,7 @@ export function createProxyCache<
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.members)
-        if (options.addItem) await options.addItem("member", member, member.guildId);
+        if (options.addItem) await options.addItem("member", member);
     },
     delete: async function (id: BigString, guildId: BigString): Promise<void> {
       // Force id to bigint
@@ -843,9 +843,9 @@ export interface CreateProxyCacheOptions {
     messages: boolean;
   };
   /** Handler to get an object from a specific table. */
-  getItem?: <T>(
-    table: "guild" | "channel" | "role" | "member" | "message" | "user",
-    id: bigint
+  getItem?: <T>(...args:
+    | [table: "guild" | "channel" | "role" | "message" | "user", id: bigint]
+    | [table: "member", id: bigint, guildId: bigint]
   ) => Promise<T>;
   /** Handler to set an object in a specific table. */
   addItem?: (
@@ -853,9 +853,9 @@ export interface CreateProxyCacheOptions {
     item: any
   ) => Promise<unknown>;
   /** Handler to delete an object in a specific table. */
-  removeItem?: (
-    table: "guild" | "channel" | "role" | "member" | "message" | "user",
-    id: bigint
+  removeItem?: (...args:
+    | [table: "guild" | "channel" | "role" | "message" | "user", id: bigint]
+    | [table: "member", id: bigint, guildId: bigint]
   ) => Promise<unknown>;
   bulk?: {
     /** Handler used to remove multiple objects in bulk. Instead of making hundreds of queries, you can optimize here using your preferred form. For example, when a guild is deleted, you want to make sure all channels, roles, messages and members are removed as well. */
