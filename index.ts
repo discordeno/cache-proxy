@@ -189,46 +189,46 @@ export function createProxyCache<
   if (!bot.cache.options.bulk) bot.cache.options.bulk = {};
 
   // Get bulk removers passed by user, data about which internal removers to replace
-  const { bulk } = bot.cache.options;
-  const { replaceInternalBulkRemover } = bulk;
+  const { removeChannel, removeGuild, removeMessages, removeRole } = bot.cache.options.bulk;
+  const { replaceInternalBulkRemover } = bot.cache.options.bulk;
 
   // If user passed bulk.removeChannel else if replaceInternalBulkRemover.channel is not set to true
-  if (bulk.removeChannel || !replaceInternalBulkRemover?.channel) {
+  if (removeChannel || !replaceInternalBulkRemover?.channel) {
     bot.cache.options.bulk.removeChannel = async function (id) {
       // If replaceInternalBulkRemover.channel is not set to true, run internal channel bulk remover
       if (!replaceInternalBulkRemover?.channel) await internalBulkRemover.removeChannel(id);
       // If user passed bulk.removeChannel, run passed bulk remover
-      await bulk.removeChannel?.(id);
+      await removeChannel?.(id);
     }
   }
 
   // If user passed bulk.removeRole else if replaceInternalBulkRemover.role is not set to true
-  if (bulk.removeRole || !replaceInternalBulkRemover?.role) {
+  if (removeRole || !replaceInternalBulkRemover?.role) {
     bot.cache.options.bulk.removeRole = async function (id) {
       // If replaceInternalBulkRemover.role is not set to true, run internal role bulk remover
       if (!replaceInternalBulkRemover?.role) await internalBulkRemover.removeRole(id);
       // If user passed bulk.removeRole, run passed bulk remover
-      await bulk.removeRole?.(id);
+      await removeRole?.(id);
     }
   }
 
   // If user passed bulk.removeMessages else if replaceInternalBulkRemover.message is not set to true
-  if (bulk.removeMessages || !replaceInternalBulkRemover?.messages) {
+  if (removeMessages || !replaceInternalBulkRemover?.messages) {
     bot.cache.options.bulk.removeMessages = async function (id) {
       // If replaceInternalBulkRemover.message is not set to true, run internal messages bulk remover
       if (!replaceInternalBulkRemover?.messages) await internalBulkRemover.removeMessages(id);
       // If user passed bulk.removeMessages, run passed bulk remover
-      await bulk.removeMessages?.(id);
+      await removeMessages?.(id);
     }
   }
 
   // If user passed bulk.removeGuild else if replaceInternalBulkRemover.guild is not set to true
-  if (bulk.removeGuild || !replaceInternalBulkRemover?.guild) {
+  if (removeGuild || !replaceInternalBulkRemover?.guild) {
     bot.cache.options.bulk.removeGuild = async function (id) {
       // If replaceInternalBulkRemover.guild is not set to true, run internal guild bulk remover
       if (!replaceInternalBulkRemover?.guild) await internalBulkRemover.removeGuild(id);
       // If user passed bulk.removeGuild, run passed bulk remover
-      await bulk.removeGuild?.(id);
+      await removeGuild?.(id);
     }
   }
 
