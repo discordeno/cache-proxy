@@ -45,14 +45,14 @@ export function setupCacheRemovals<B extends Bot>(
     const payload = data.d as DiscordGuildMemberRemove;
     GUILD_MEMBER_REMOVE(bot, data, shardId);
 
-    bot.cache.members.delete(bot.transformers.snowflake(payload.user.id));
+    bot.cache.members.delete(bot.transformers.snowflake(payload.user.id), bot.transformers.snowflake(payload.guild_id));
   };
 
   bot.handlers.GUILD_BAN_ADD = function (_, data, shardId) {
     const payload = data.d as DiscordGuildBanAddRemove;
     GUILD_BAN_ADD(bot, data, shardId);
 
-    bot.cache.members.delete(bot.transformers.snowflake(payload.user.id));
+    bot.cache.members.delete(bot.transformers.snowflake(payload.user.id), bot.transformers.snowflake(payload.guild_id));
   };
 
   // TODO: fix emojis. For now deal with it lazy people or make ur own cache proxy plugin :)

@@ -47,11 +47,10 @@ export interface ProxyCacheProps<T extends ProxyCacheTypes> {
       delete: (id: bigint) => Promise<void>;
     };
     members: {
-      guildIDs: Collection<bigint, bigint>;
       memory: Collection<bigint, T["member"]>;
-      get: (id: bigint) => Promise<T["member"] | undefined>;
+      get: (id: bigint, guildId: bigint) => Promise<T["member"] | undefined>;
       set: (value: T["member"]) => Promise<void>;
-      delete: (id: bigint) => Promise<void>;
+      delete: (id: bigint, guildId: bigint) => Promise<void>;
     };
     messages: {
       channelIDs: Collection<bigint, bigint>;
@@ -85,22 +84,17 @@ export function createProxyCache<
 
   bot.cache.options = options;
 
-  if (!bot.cache.options.bulk) bot.cache.options.bulk = {};
-  // If user did not provide a bulk remover
-  if (!bot.cache.options.bulk.removeChannel) {
-    bot.cache.options.bulk.removeChannel = async function (id) {
+  const internalBulkRemover = {
+    removeChannel: async function (id: bigint) {
       // Remove from in memory as well
       bot.cache.messages.memory.forEach((message) => {
         if (message.channelId === id) bot.cache.messages.memory.delete(id);
         bot.cache.messages.channelIDs.delete(id);
       });
-
+  
       bot.cache.channels.memory.delete(id);
-    };
-  }
-
-  if (!bot.cache.options.bulk.removeRole) {
-    bot.cache.options.bulk.removeRole = async function (id) {
+    },
+    removeRole: async function (id: bigint) {
       // Delete the role itself if it exists
       bot.cache.roles.memory.delete(id);
 
@@ -128,11 +122,8 @@ export function createProxyCache<
         if (member.roles?.includes(id))
           member.roles = member.roles.filter((roleID: bigint) => roleID !== id);
       });
-    };
-  }
-
-  if (!bot.cache.options.bulk.removeMessages) {
-    bot.cache.options.bulk.removeMessages = async function (ids) {
+    },
+    removeMessages: async function (ids: bigint[]) {
       const channelID = ids.find((id) => bot.cache.messages.channelIDs.get(id));
       if (channelID) {
         const guildID = bot.cache.channels.guildIDs.get(channelID);
@@ -155,11 +146,8 @@ export function createProxyCache<
         bot.cache.messages.memory.delete(id);
         bot.cache.messages.channelIDs.delete(id);
       }
-    };
-  }
-
-  if (!bot.cache.options.bulk.removeGuild) {
-    bot.cache.options.bulk.removeGuild = async function (id) {
+    },
+    removeGuild: async function (id: bigint) {
       // Remove from memory
       bot.cache.guilds.memory.delete(id);
 
@@ -190,11 +178,56 @@ export function createProxyCache<
       // Remove any associated members
       bot.cache.members.memory.forEach((member) => {
         if (member.guildId === id) {
-          bot.cache.members.memory.delete(member.id);
-          bot.cache.members.guildIDs.delete(member.id);
+          bot.cache.members.memory.delete(BigInt(`${member.id}${member.guildID}`));
         }
       });
-    };
+    },
+  };
+
+  if (!bot.cache.options.bulk) bot.cache.options.bulk = {};
+
+  // Get bulk removers passed by user, data about which internal removers to replace
+  const { removeChannel, removeGuild, removeMessages, removeRole } = bot.cache.options.bulk;
+  const { replaceInternalBulkRemover } = bot.cache.options.bulk;
+
+  // If user passed bulk.removeChannel else if replaceInternalBulkRemover.channel is not set to true
+  if (removeChannel || !replaceInternalBulkRemover?.channel) {
+    bot.cache.options.bulk.removeChannel = async function (id) {
+      // If replaceInternalBulkRemover.channel is not set to true, run internal channel bulk remover
+      if (!replaceInternalBulkRemover?.channel) await internalBulkRemover.removeChannel(id);
+      // If user passed bulk.removeChannel, run passed bulk remover
+      await removeChannel?.(id);
+    }
+  }
+
+  // If user passed bulk.removeRole else if replaceInternalBulkRemover.role is not set to true
+  if (removeRole || !replaceInternalBulkRemover?.role) {
+    bot.cache.options.bulk.removeRole = async function (id) {
+      // If replaceInternalBulkRemover.role is not set to true, run internal role bulk remover
+      if (!replaceInternalBulkRemover?.role) await internalBulkRemover.removeRole(id);
+      // If user passed bulk.removeRole, run passed bulk remover
+      await removeRole?.(id);
+    }
+  }
+
+  // If user passed bulk.removeMessages else if replaceInternalBulkRemover.message is not set to true
+  if (removeMessages || !replaceInternalBulkRemover?.messages) {
+    bot.cache.options.bulk.removeMessages = async function (id) {
+      // If replaceInternalBulkRemover.message is not set to true, run internal messages bulk remover
+      if (!replaceInternalBulkRemover?.messages) await internalBulkRemover.removeMessages(id);
+      // If user passed bulk.removeMessages, run passed bulk remover
+      await removeMessages?.(id);
+    }
+  }
+
+  // If user passed bulk.removeGuild else if replaceInternalBulkRemover.guild is not set to true
+  if (removeGuild || !replaceInternalBulkRemover?.guild) {
+    bot.cache.options.bulk.removeGuild = async function (id) {
+      // If replaceInternalBulkRemover.guild is not set to true, run internal guild bulk remover
+      if (!replaceInternalBulkRemover?.guild) await internalBulkRemover.removeGuild(id);
+      // If user passed bulk.removeGuild, run passed bulk remover
+      await removeGuild?.(id);
+    }
   }
 
   bot.cache.guilds = {
@@ -289,8 +322,8 @@ export function createProxyCache<
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.roles.guildIDs.get(roleID);
           if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID);
-            if (guild) return guild;
+            const role = bot.cache.guilds.memory.get(guildID)?.roles?.get(roleID);
+            if (role) return role;
           }
         } else if (bot.cache.roles.memory.has(roleID)) {
           // Check if its in memory outside of guilds
@@ -348,33 +381,30 @@ export function createProxyCache<
   };
 
   bot.cache.members = {
-    guildIDs: new Collection<bigint, bigint>(),
     memory: new Collection<bigint, T["member"]>(),
-    get: async function (id: BigString): Promise<T["member"] | undefined> {
+    get: async function (id: BigString, guildId: BigString): Promise<T["member"] | undefined> {
       // Force into bigint form
       const memberID = BigInt(id);
+      const guildID = BigInt(guildId)
 
       // If available in memory, use it.
       if (options.cacheInMemory.members) {
         // If guilds are cached, members will be inside them
         if (options.cacheInMemory.guilds) {
-          const guildID = bot.cache.members.guildIDs.get(memberID);
-          if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID);
-            if (guild) return guild;
-          }
-        } else if (bot.cache.members.memory.has(memberID)) {
+          const member = bot.cache.guilds.memory.get(guildID)?.members?.get(memberID);
+          if (member) return member;
+        } else if (bot.cache.members.memory.has(BigInt(`${memberID}${guildId}`))) {
           // Check if its in memory outside of guilds
-          return bot.cache.members.memory.get(memberID);
+          return bot.cache.members.memory.get(BigInt(`${memberID}${guildId}`));
         }
       }
 
       // Otherwise try to get from non-memory cache
       if (!options.cacheOutsideMemory.members || !options.getItem) return;
 
-      const stored = await options.getItem<T["member"]>("member", memberID);
+      const stored = await options.getItem<T["member"]>("member", memberID, guildID);
       if (stored && options.cacheInMemory.members)
-        bot.cache.members.memory.set(memberID, stored);
+        bot.cache.members.memory.set(BigInt(`${memberID}${guildId}`), stored);
       return stored;
     },
     set: async function (member: T["member"]): Promise<void> {
@@ -386,39 +416,36 @@ export function createProxyCache<
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory.members) {
-        if (member.guildId)
-          bot.cache.members.guildIDs.set(member.id, member.guildId);
-
         if (options.cacheInMemory.guilds) {
-          const guildID = bot.cache.members.guildIDs.get(member.id);
-          if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID);
+          if (member.guildId) {
+            const guild = bot.cache.guilds.memory.get(member.guildId);
             if (guild) guild.members.set(member.id, member);
             else
               console.warn(
-                `[CACHE] Can't cache member(${member.id}) since guild.members is enabled but a guild (${guildID}) was not found`
+                `[CACHE] Can't cache member(${member.id}) since guild.members is enabled but a guild (${member.guildId}) was not found`
               );
           } else
             console.warn(
               `[CACHE] Can't cache member(${member.id}) since guild.members is enabled but a guild id was not found.`
             );
-        } else bot.cache.members.memory.set(member.id, member);
+        } else bot.cache.members.memory.set(BigInt(`${member.id}${member.guildId}`), member);
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.members)
         if (options.addItem) await options.addItem("member", member);
     },
-    delete: async function (id: BigString): Promise<void> {
+    delete: async function (id: BigString, guildId: BigString): Promise<void> {
       // Force id to bigint
       const memberID = BigInt(id);
+      const guildID = BigInt(guildId);
+
       // Remove from memory
-      bot.cache.members.memory.delete(memberID);
+      bot.cache.members.memory.delete(BigInt(`${memberID}${guildId}`));
       bot.cache.guilds.memory
-        .get(bot.cache.members.guildIDs.get(memberID)!)
+        .get(guildID)
         ?.members?.delete(memberID);
-      bot.cache.members.guildIDs.delete(memberID);
       // Remove from non-memory cache
-      if (options.removeItem) await options.removeItem("member", memberID);
+      if (options.removeItem) await options.removeItem("member", memberID, guildID);
     },
   };
 
@@ -435,8 +462,12 @@ export function createProxyCache<
         if (options.cacheInMemory.guilds) {
           const guildID = bot.cache.channels.guildIDs.get(channelID);
           if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID);
-            if (guild) return guild;
+            const channel = bot.cache.guilds.memory.get(guildID)?.channels?.get(channelID);
+            if (channel) return channel;
+          } else {
+            // Return from cache.channels if this channel isn't in a guild
+            const channel = bot.cache.channels.memory.get(channelID);
+            if (channel) return channel;
           }
         } else if (bot.cache.channels.memory.has(channelID)) {
           // Check if its in memory outside of guilds
@@ -847,9 +878,9 @@ export interface CreateProxyCacheOptions {
     messages: boolean;
   };
   /** Handler to get an object from a specific table. */
-  getItem?: <T>(
-    table: "guild" | "channel" | "role" | "member" | "message" | "user",
-    id: bigint
+  getItem?: <T>(...args:
+    | [table: "guild" | "channel" | "role" | "message" | "user", id: bigint]
+    | [table: "member", id: bigint, guildId: bigint]
   ) => Promise<T>;
   /** Handler to set an object in a specific table. */
   addItem?: (
@@ -857,9 +888,9 @@ export interface CreateProxyCacheOptions {
     item: any
   ) => Promise<unknown>;
   /** Handler to delete an object in a specific table. */
-  removeItem?: (
-    table: "guild" | "channel" | "role" | "member" | "message" | "user",
-    id: bigint
+  removeItem?: (...args:
+    | [table: "guild" | "channel" | "role" | "message" | "user", id: bigint]
+    | [table: "member", id: bigint, guildId: bigint]
   ) => Promise<unknown>;
   bulk?: {
     /** Handler used to remove multiple objects in bulk. Instead of making hundreds of queries, you can optimize here using your preferred form. For example, when a guild is deleted, you want to make sure all channels, roles, messages and members are removed as well. */
@@ -870,6 +901,29 @@ export interface CreateProxyCacheOptions {
     removeRole?: (id: bigint) => Promise<unknown>;
     /** Handler used to remove multiple messages. */
     removeMessages?: (ids: bigint[]) => Promise<unknown>;
+    /** Options to choose whether or not to replace internal removers. */
+    replaceInternalBulkRemover?: {
+      /** Whether or not to replace internal guild remover.
+       * 
+       * By default, the proxy will bulk remove guilds from memory. You can override this behavior by setting this option to `true`.
+       */
+      guild?: boolean;
+      /** Whether or not to replace internal channel remover.
+       * 
+       * By default, the proxy will bulk remove channel from memory. You can override this behavior by setting this option to `true`.
+       */
+      channel?: boolean;
+      /** Whether or not to replace internal role remover.
+       * 
+       * By default, the proxy will bulk remove role from memory. You can override this behavior by setting this option to `true`.
+       */
+      role?: boolean;
+      /** Whether or not to replace internal message remover.
+       * 
+       * By default, the proxy will bulk remove message from memory. You can override this behavior by setting this option to `true`.
+       */
+      messages?: boolean;
+    }
   };
 }
 
