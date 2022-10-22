@@ -75,7 +75,7 @@ export type BotWithProxyCache<
 > = Omit<B, "cache"> & ProxyCacheProps<T>;
 
 export function createProxyCache<
-  T extends ProxyCacheTypes,
+  T extends ProxyCacheTypes<boolean> = ProxyCacheTypes,
   B extends Bot = Bot
 >(rawBot: B, options: CreateProxyCacheOptions): BotWithProxyCache<T, B> {
   // @ts-ignore why is this failing?
@@ -165,7 +165,7 @@ export function createProxyCache<
 
       // Remove any associated messages
       bot.cache.messages.memory.forEach((message) => {
-        if (message.guildID === id) {
+        if (message.guildId === id) {
           bot.cache.messages.memory.delete(message.id);
           bot.cache.messages.channelIDs.delete(message.id);
         }
@@ -173,7 +173,7 @@ export function createProxyCache<
 
       // Remove any associated channels
       bot.cache.channels.memory.forEach((channel) => {
-        if (channel.guildID === id) {
+        if (channel.guildId === id) {
           bot.cache.channels.memory.delete(channel.id);
           bot.cache.channels.guildIDs.delete(channel.id);
         }
@@ -181,7 +181,7 @@ export function createProxyCache<
 
       // Remove any associated roles
       bot.cache.roles.memory.forEach((role) => {
-        if (role.guildID === id) {
+        if (role.guildId === id) {
           bot.cache.roles.memory.delete(role.id);
           bot.cache.roles.guildIDs.delete(role.id);
         }
@@ -189,7 +189,7 @@ export function createProxyCache<
 
       // Remove any associated members
       bot.cache.members.memory.forEach((member) => {
-        if (member.guildID === id) {
+        if (member.guildId === id) {
           bot.cache.members.memory.delete(member.id);
           bot.cache.members.guildIDs.delete(member.id);
         }
@@ -761,13 +761,13 @@ export function createProxyCache<
   return bot;
 }
 
-export type ProxyCacheTypes = {
-  guild: any;
-  user: any;
-  channel: any;
-  member: any;
-  role: any;
-  message: any;
+export type ProxyCacheTypes<T extends boolean = true> = {
+  guild: T extends true ? Guild : any;
+  user: T extends true ? User : any;
+  channel: T extends true ? Channel : any;
+  member: T extends true ? Member : any;
+  role: T extends true ? Role : any;
+  message: T extends true ? Message : any;
 };
 
 export interface CreateProxyCacheOptions {
