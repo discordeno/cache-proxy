@@ -198,7 +198,7 @@ export function createProxyCache<
       // Fetch Guild through Helpers
       const guild = await bot.helpers.getGuild(id);
       // Return nothing if no Guild could be fetched
-      if (!guild) return undefined;
+      if (!guild) return;
       // Set Guild in cache
       await bot.cache.guilds.set(guild);
       // Return from cache so we dont have to handle stuff like shouldCache twice
