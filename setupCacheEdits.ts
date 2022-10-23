@@ -38,7 +38,7 @@ export function setupCacheEdits<B extends Bot>(
     // Update non-memory cache
     bot.cache.guilds.get(guildID).then((g) => {
       if (g) {
-        g.memberCount++;
+        g.memberCount--;
         bot.cache.guilds.set(g);
       }
     });
