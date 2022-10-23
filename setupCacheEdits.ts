@@ -19,8 +19,10 @@ export function setupCacheEdits<B extends Bot>(
     if (guild) guild.memberCount++;
     // Update non-memory cache
     bot.cache.guilds.get(guildID).then((g) => {
-      g.memberCount++;
-      bot.cache.guilds.set(g);
+      if (g) {
+        g.memberCount++;
+        bot.cache.guilds.set(g);
+      }
     });
 
     GUILD_MEMBER_ADD(bot, data, shardId);
@@ -35,8 +37,10 @@ export function setupCacheEdits<B extends Bot>(
     if (guild) guild.memberCount--;
     // Update non-memory cache
     bot.cache.guilds.get(guildID).then((g) => {
-      g.memberCount++;
-      bot.cache.guilds.set(g);
+      if (g) {
+        g.memberCount--;
+        bot.cache.guilds.set(g);
+      }
     });
 
     GUILD_MEMBER_REMOVE(bot, data, shardId);
