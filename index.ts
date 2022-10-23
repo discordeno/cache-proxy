@@ -266,7 +266,7 @@ export function createProxyCache<
         bot.cache.guilds.memory.set(guild.id, guild);
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.guilds)
-        if (options.addItem) await options.addItem("guild", guild);
+        if (options.setItem) await options.setItem("guild", guild);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -304,7 +304,7 @@ export function createProxyCache<
         bot.cache.users.memory.set(user.id, user);
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.users)
-        if (options.addItem) await options.addItem("user", user);
+        if (options.setItem) await options.setItem("user", user);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -373,7 +373,7 @@ export function createProxyCache<
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.roles)
-        if (options.addItem) await options.addItem("role", role);
+        if (options.setItem) await options.setItem("role", role);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -456,7 +456,7 @@ export function createProxyCache<
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.members)
-        if (options.addItem) await options.addItem("member", member);
+        if (options.setItem) await options.setItem("member", member);
     },
     delete: async function (id: BigString, guildId: BigString): Promise<void> {
       // Force id to bigint
@@ -537,7 +537,7 @@ export function createProxyCache<
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.channels)
-        if (options.addItem) await options.addItem("channel", channel);
+        if (options.setItem) await options.setItem("channel", channel);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -620,7 +620,7 @@ export function createProxyCache<
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.messages)
-        if (options.addItem) await options.addItem("message", message);
+        if (options.setItem) await options.setItem("message", message);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -913,7 +913,7 @@ export interface CreateProxyCacheOptions {
       | [table: "member", id: bigint, guildId: bigint]
   ) => Promise<T>;
   /** Handler to set an object in a specific table. */
-  addItem?: (
+  setItem?: (
     table: "guild" | "channel" | "role" | "member" | "message" | "user",
     item: any
   ) => Promise<unknown>;
@@ -980,7 +980,7 @@ export interface CreateProxyCacheOptions {
 //   async getItem(table, id) {
 //     return "" as unknown as any;
 //   },
-//   async addItem(table, item) {
+//   async setItem(table, item) {
 //     return;
 //   },
 //   async removeItem(table, id) {
