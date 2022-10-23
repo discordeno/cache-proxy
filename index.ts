@@ -192,7 +192,7 @@ export function createProxyCache<
   const fetchers = {
     fetchGuild: async (id: bigint) => {
       // Return nothing if we don't want fetching
-      if (!options.fetchIfMissing?.guilds) return undefined;
+      if (!options.fetchIfMissing?.guilds) return;
       // Check if Guild is unavailable
       if (unavailablesGuilds.has(id)) return undefined;
       // Fetch Guild through Helpers
