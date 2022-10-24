@@ -1,13 +1,3 @@
-/**
-
-DONE
-1. let me tell if it should store in mem or in persistent cache
-2. MAIN - let me tell what types of things i want ~ if i only want guilds, no point in having the others
-3. let me specify the props i want to store
-4. let me provide a function that runs before adding to cache to let me choose if a channel/guild/user/whatever should be cached or not (like if (shouldCache(channel)) cache.add())
-5. probably add support for any persistent cache by having functions like "getFromPersistentCache", set etc. 
-6. allow guild.channels, guild.roles
- */
 import {
   BigString,
   Bot,
@@ -957,38 +947,6 @@ export interface CreateProxyCacheOptions {
     };
   };
 }
-
-// const bot = createBot({ token: "" });
-// const proxy = createProxyCache(bot, {
-//   undesiredProps: {
-//     users: ["email"],
-//   },
-//   cacheInMemory: {
-//     guilds: true,
-//     users: true,
-//     channels: true,
-//     members: true,
-//     roles: true,
-//   },
-//   cacheOutsideMemory: {
-//     guilds: true,
-//     users: true,
-//     channels: true,
-//     members: true,
-//     roles: true,
-//   },
-//   async getItem(table, id) {
-//     return "" as unknown as any;
-//   },
-//   async setItem(table, item) {
-//     return;
-//   },
-//   async removeItem(table, id) {
-//     return;
-//   },
-// });
-
-// await proxy.cache.guilds.get(0n);
 
 declare module "discordeno" {
   interface Channel {
