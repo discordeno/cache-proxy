@@ -84,6 +84,35 @@ export function createProxyCache<
 
   bot.cache.options = options;
 
+  if (!bot.cache.options.cacheInMemory)
+    bot.cache.options.cacheInMemory = { default: true };
+  if (!bot.cache.options.cacheOutsideMemory)
+    bot.cache.options.cacheOutsideMemory = { default: false };
+
+  const cacheInMemoryDefault = bot.cache.options.cacheInMemory.default;
+  const cacheOutsideMemoryDefault =
+    bot.cache.options.cacheOutsideMemory.default;
+
+  bot.cache.options.cacheInMemory = {
+    guilds: cacheInMemoryDefault,
+    users: cacheInMemoryDefault,
+    channels: cacheInMemoryDefault,
+    members: cacheInMemoryDefault,
+    roles: cacheInMemoryDefault,
+    messages: cacheInMemoryDefault,
+    ...bot.cache.options.cacheInMemory,
+  };
+
+  bot.cache.options.cacheOutsideMemory = {
+    guilds: cacheOutsideMemoryDefault,
+    users: cacheOutsideMemoryDefault,
+    channels: cacheOutsideMemoryDefault,
+    members: cacheOutsideMemoryDefault,
+    roles: cacheOutsideMemoryDefault,
+    messages: cacheOutsideMemoryDefault,
+    ...bot.cache.options.cacheOutsideMemory,
+  };
+
   const internalBulkRemover = {
     removeChannel: async function (id: bigint) {
       // Remove from in memory as well
@@ -876,35 +905,43 @@ export interface CreateProxyCacheOptions {
     /** The properties you do NOT want in a message object. */
     messages?: (keyof Message)[];
   };
-  /** Options to choose how the proxy will cache everything. */
-  cacheInMemory: {
+  /** Options to choose how the proxy will cache everything.
+   *
+   * By default, all props inside `cacheInMemory` are set to `true`. */
+  cacheInMemory?: {
     /** Whether or not to cache guilds. */
-    guilds: boolean;
+    guilds?: boolean;
     /** Whether or not to cache users. */
-    users: boolean;
+    users?: boolean;
     /** Whether or not to cache channels. If guilds is enabled, then these are cached inside the guild object. */
-    channels: boolean;
+    channels?: boolean;
     /** Whether or not to cache members. If guilds is enabled, then these are cached inside the guild object. */
-    members: boolean;
+    members?: boolean;
     /** Whether or not the cache roles. If guilds is enabled, then these are cached inside the guild object.*/
-    roles: boolean;
+    roles?: boolean;
     /** Whether or not the cache messages. If channels is enabled, then these are cached inside the channel object.*/
-    messages: boolean;
+    messages?: boolean;
+    /** Default value for the properties that are not provided inside `cacheInMemory`. */
+    default: boolean;
   };
-  /** Options to choose how the proxy will cache in a separate persitant cache. */
-  cacheOutsideMemory: {
+  /** Options to choose how the proxy will cache in a separate persitant cache.
+   *
+   * By default, all props inside `cacheOutsideMemory` are set to `false`. */
+  cacheOutsideMemory?: {
     /** Whether or not to cache guilds. */
-    guilds: boolean;
+    guilds?: boolean;
     /** Whether or not to cache users. */
-    users: boolean;
+    users?: boolean;
     /** Whether or not to cache channels. */
-    channels: boolean;
+    channels?: boolean;
     /** Whether or not to cache members. */
-    members: boolean;
+    members?: boolean;
     /** Whether or not to cache roles. */
-    roles: boolean;
+    roles?: boolean;
     /** Whether or not to cache messages. */
-    messages: boolean;
+    messages?: boolean;
+    /** Default value for the properties that are not provided inside `cacheOutsideMemory`. */
+    default: boolean;
   };
   /** Handler to get an object from a specific table. */
   getItem?: <T>(
