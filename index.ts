@@ -1,13 +1,3 @@
-/**
-
-DONE
-1. let me tell if it should store in mem or in persistent cache
-2. MAIN - let me tell what types of things i want ~ if i only want guilds, no point in having the others
-3. let me specify the props i want to store
-4. let me provide a function that runs before adding to cache to let me choose if a channel/guild/user/whatever should be cached or not (like if (shouldCache(channel)) cache.add())
-5. probably add support for any persistent cache by having functions like "getFromPersistentCache", set etc. 
-6. allow guild.channels, guild.roles
- */
 import {
   BigString,
   Bot,
@@ -295,7 +285,7 @@ export function createProxyCache<
         bot.cache.guilds.memory.set(guild.id, guild);
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.guilds)
-        if (options.addItem) await options.addItem("guild", guild);
+        if (options.setItem) await options.setItem("guild", guild);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -333,7 +323,7 @@ export function createProxyCache<
         bot.cache.users.memory.set(user.id, user);
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.users)
-        if (options.addItem) await options.addItem("user", user);
+        if (options.setItem) await options.setItem("user", user);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -402,7 +392,7 @@ export function createProxyCache<
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.roles)
-        if (options.addItem) await options.addItem("role", role);
+        if (options.setItem) await options.setItem("role", role);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -485,7 +475,7 @@ export function createProxyCache<
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.members)
-        if (options.addItem) await options.addItem("member", member);
+        if (options.setItem) await options.setItem("member", member);
     },
     delete: async function (id: BigString, guildId: BigString): Promise<void> {
       // Force id to bigint
@@ -566,7 +556,7 @@ export function createProxyCache<
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.channels)
-        if (options.addItem) await options.addItem("channel", channel);
+        if (options.setItem) await options.setItem("channel", channel);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -649,7 +639,7 @@ export function createProxyCache<
       }
       // If user wants non-memory cache, we cache it
       if (options.cacheOutsideMemory.messages)
-        if (options.addItem) await options.addItem("message", message);
+        if (options.setItem) await options.setItem("message", message);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -950,7 +940,7 @@ export interface CreateProxyCacheOptions {
       | [table: "member", id: bigint, guildId: bigint]
   ) => Promise<T>;
   /** Handler to set an object in a specific table. */
-  addItem?: (
+  setItem?: (
     table: "guild" | "channel" | "role" | "member" | "message" | "user",
     item: any
   ) => Promise<unknown>;
@@ -994,38 +984,6 @@ export interface CreateProxyCacheOptions {
     };
   };
 }
-
-// const bot = createBot({ token: "" });
-// const proxy = createProxyCache(bot, {
-//   undesiredProps: {
-//     users: ["email"],
-//   },
-//   cacheInMemory: {
-//     guilds: true,
-//     users: true,
-//     channels: true,
-//     members: true,
-//     roles: true,
-//   },
-//   cacheOutsideMemory: {
-//     guilds: true,
-//     users: true,
-//     channels: true,
-//     members: true,
-//     roles: true,
-//   },
-//   async getItem(table, id) {
-//     return "" as unknown as any;
-//   },
-//   async addItem(table, item) {
-//     return;
-//   },
-//   async removeItem(table, id) {
-//     return;
-//   },
-// });
-
-// await proxy.cache.guilds.get(0n);
 
 declare module "discordeno" {
   interface Channel {
