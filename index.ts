@@ -411,7 +411,7 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory?.users || !options.getItem) return;
 
       const stored = await options.getItem<T["user"]>("user", userID);
-      if (stored && options.cacheInMemory?.users)
+      if (stored && options.cacheInMemory?.users) {
         bot.cache.users.memory.set(userID, stored);
       }
 
@@ -472,7 +472,7 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory?.roles || !options.getItem) return;
 
       const stored = await options.getItem<T["role"]>("role", roleID);
-      if (stored && options.cacheInMemory?.roles)
+      if (stored && options.cacheInMemory?.roles) {
         bot.cache.roles.memory.set(roleID, stored);
       }
 
@@ -567,7 +567,7 @@ export function createProxyCache<
         memberID,
         guildID
       );
-      if (stored && options.cacheInMemory?.members)
+      if (stored && options.cacheInMemory?.members) {
         bot.cache.members.memory.set(BigInt(`${memberID}${guildId}`), stored);
       }
 
@@ -657,7 +657,7 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory?.channels || !options.getItem) return;
 
       const stored = await options.getItem<T["channel"]>("channel", channelID);
-      if (stored && options.cacheInMemory?.channels)
+      if (stored && options.cacheInMemory?.channels) {
         bot.cache.channels.memory.set(channelID, stored);
       }
 
@@ -756,7 +756,7 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory?.messages || !options.getItem) return;
 
       const stored = await options.getItem<T["message"]>("message", messageID);
-      if (stored && options.cacheInMemory?.messages)
+      if (stored && options.cacheInMemory?.messages) {
         bot.cache.messages.memory.set(messageID, stored);
       }
 
