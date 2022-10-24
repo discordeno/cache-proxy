@@ -35,14 +35,22 @@ export interface ProxyCacheProps<T extends ProxyCacheTypes> {
     channels: {
       guildIDs: Collection<bigint, bigint>;
       memory: Collection<bigint, T["channel"]>;
-      get: (id: bigint) => Promise<T["channel"] | undefined>;
+      /**
+       * @param id Channel ID
+       * @param guildId Guild ID (Only required if option fetchIfMissing.channels is set to true)
+       */
+      get: (id: bigint, guildID?: bigint) => Promise<T["channel"] | undefined>;
       set: (value: T["channel"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
     roles: {
       guildIDs: Collection<bigint, bigint>;
       memory: Collection<bigint, T["role"]>;
-      get: (id: bigint) => Promise<T["role"] | undefined>;
+      /**
+       * @param id Role ID
+       * @param guildId Guild ID (Only required if option fetchIfMissing.roles is set to true)
+       */
+      get: (id: bigint, guildId?: bigint) => Promise<T["role"] | undefined>;
       set: (value: T["role"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
@@ -55,7 +63,12 @@ export interface ProxyCacheProps<T extends ProxyCacheTypes> {
     messages: {
       channelIDs: Collection<bigint, bigint>;
       memory: Collection<bigint, T["message"]>;
-      get: (id: bigint) => Promise<T["message"] | undefined>;
+      /**
+       * @param id Message ID
+       * @param channelId Channel ID (Only required if option fetchIfMissing.messages is set to true)
+       * @param guildId Guild ID (Only required if option fetchIfMissing.messages is set to true)
+       */
+      get: (id: bigint, channelId?: bigint, guildId?: bigint) => Promise<T["message"] | undefined>;
       set: (value: T["message"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
@@ -204,6 +217,74 @@ export function createProxyCache<
       // Return from cache so we dont have to handle stuff like shouldCache twice
       return bot.cache.guilds.get(id);
     },
+    fetchRole: async (guildId: bigint, roleId: bigint) => {
+      // Return nothing if we don't want fetching
+      if (!options.fetchIfMissing?.roles) return;
+      // Check if Guild is unavailable
+      if (unavailablesGuilds.has(guildId)) return;
+      // Fetch Roles through Helpers
+      const roles = await bot.helpers.getRoles(guildId);
+      // Return nothing if no Roles could be fetched
+      if (!roles) return;
+      // Set Roles in cache
+      await Promise.all(roles.map((r) => bot.cache.roles.set(r)));
+      // Return from cache so we dont have to handle stuff like shouldCache twice
+      return bot.cache.roles.get(roleId);
+    },
+    fetchChannel: async (guildId: bigint, channelId: bigint) => {
+      // Return nothing if we don't want fetching
+      if (!options.fetchIfMissing?.channels) return;
+      // Check if Guild is unavailable
+      if (unavailablesGuilds.has(guildId)) return;
+      // Fetch Channel through Helpers
+      const channel = await bot.helpers.getChannel(channelId);
+      // Return nothing if no Channels could be fetched
+      if (!channel) return;
+      // Set channel in cache
+      await bot.cache.channels.set(channel)
+      // Return from cache so we dont have to handle stuff like shouldCache twice
+      return bot.cache.channels.get(channelId);
+    },
+    fetchMember: async (guildId: bigint, memberId: bigint) => {
+      // Return nothing if we don't want fetching
+      if (!options.fetchIfMissing?.members) return;
+      // Check if Guild is unavailable
+      if (unavailablesGuilds.has(guildId)) return;
+      // Fetch Member through Helpers
+      const member = await bot.helpers.getMember(guildId, memberId);
+      // Return nothing if no Member could be fetched
+      if (!member) return;
+      // Set Member in cache
+      await bot.cache.members.set(member)
+      // Return from cache so we dont have to handle stuff like shouldCache twice
+      return bot.cache.members.get(memberId, guildId);
+    },
+    fetchUser: async (userId: bigint) => {
+      // Return nothing if we don't want fetching
+      if (!options.fetchIfMissing?.users) return;
+      // Fetch User through Helpers
+      const user = await bot.helpers.getUser(userId);
+      // Return nothing if no User could be fetched
+      if (!user) return;
+      // Set User in cache
+      await bot.cache.users.set(user)
+      // Return from cache so we dont have to handle stuff like shouldCache twice
+      return bot.cache.users.get(userId);
+    },
+    fetchMessage: async (messageId: bigint, guildId: bigint, channelId: bigint) => {
+      // Return nothing if we don't want fetching
+      if (!options.fetchIfMissing?.messages) return;
+      // Check if Guild is unavailable
+      if (unavailablesGuilds.has(guildId)) return;
+      // Fetch Message through Helpers
+      const message = await bot.helpers.getMessage(channelId, messageId);
+      // Return nothing if no Message could be fetched
+      if (!message) return;
+      // Set Message in cache
+      await bot.cache.messages.set(message)
+      // Return from cache so we dont have to handle stuff like shouldCache twice
+      return bot.cache.messages.get(messageId);
+    }
   }
 
   if (!bot.cache.options.bulk) bot.cache.options.bulk = {};
@@ -311,9 +392,17 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory.users || !options.getItem) return;
 
       const stored = await options.getItem<T["user"]>("user", userID);
-      if (stored && options.cacheInMemory.users)
+      if (stored && options.cacheInMemory.users) {
         bot.cache.users.memory.set(userID, stored);
-      return stored;
+      }
+
+      if (stored) return stored;
+
+      if (options.fetchIfMissing?.users) {
+        return fetchers.fetchUser(userID);
+      }
+
+      return;
     },
     set: async function (user: T["user"]): Promise<void> {
       if (options.shouldCache?.user && !(await options.shouldCache.user(user)))
@@ -339,7 +428,7 @@ export function createProxyCache<
   bot.cache.roles = {
     guildIDs: new Collection<bigint, bigint>(),
     memory: new Collection<bigint, T["role"]>(),
-    get: async function (id: BigString): Promise<T["role"] | undefined> {
+    get: async function (id: BigString, guildId?: BigString): Promise<T["role"] | undefined> {
       // Force into bigint form
       const roleID = BigInt(id);
 
@@ -364,9 +453,24 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory.roles || !options.getItem) return;
 
       const stored = await options.getItem<T["role"]>("role", roleID);
-      if (stored && options.cacheInMemory.roles)
+      if (stored && options.cacheInMemory.roles) {
         bot.cache.roles.memory.set(roleID, stored);
-      return stored;
+      }
+
+      // If its stored, return that
+      if (stored) return stored;
+
+      // If neither stored nor memory has the role and fetching is enabled, fetch it
+      if (options.fetchIfMissing?.roles && guildId) {
+        return fetchers.fetchRole(BigInt(guildId), roleID)
+      }
+
+      if (options.fetchIfMissing?.roles) {
+        console.error(new Error('"fetchIfMissing?.roles" is set to true but guild ID was not provided'));
+      }
+
+      // else return nothing
+      return;
     },
     set: async function (role: T["role"]): Promise<void> {
       if (options.shouldCache?.role && !(await options.shouldCache.role(role)))
@@ -444,9 +548,17 @@ export function createProxyCache<
         memberID,
         guildID
       );
-      if (stored && options.cacheInMemory.members)
+      if (stored && options.cacheInMemory.members) {
         bot.cache.members.memory.set(BigInt(`${memberID}${guildId}`), stored);
-      return stored;
+      }
+
+      if (stored) return stored;
+
+      if (options.fetchIfMissing?.members) {
+        fetchers.fetchMember(guildID, memberID);
+      }
+
+      return
     },
     set: async function (member: T["member"]): Promise<void> {
       if (
@@ -497,7 +609,7 @@ export function createProxyCache<
   bot.cache.channels = {
     guildIDs: new Collection<bigint, bigint>(),
     memory: new Collection<bigint, T["channel"]>(),
-    get: async function (id: BigString): Promise<T["channel"] | undefined> {
+    get: async function (id: BigString, guildID?: BigString): Promise<T["channel"] | undefined> {
       // Force into bigint form
       const channelID = BigInt(id);
 
@@ -526,9 +638,24 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory.channels || !options.getItem) return;
 
       const stored = await options.getItem<T["channel"]>("channel", channelID);
-      if (stored && options.cacheInMemory.channels)
+      if (stored && options.cacheInMemory.channels) {
         bot.cache.channels.memory.set(channelID, stored);
-      return stored;
+      }
+
+      // If its stored, return that
+      if (stored) return stored;
+
+      // If neither stored nor memory has the channel and fetching is enabled, fetch it
+      if (options.fetchIfMissing?.channels && guildID) {
+        return fetchers.fetchChannel(BigInt(guildID), channelID)
+      }
+
+      if (options.fetchIfMissing?.channels) {
+        console.error(new Error('"fetchIfMissing?.channels" is set to true but guild ID was not provided'));
+      }
+
+      // else return nothing
+      return;
     },
     set: async function (channel: T["channel"]): Promise<void> {
       if (
@@ -579,7 +706,7 @@ export function createProxyCache<
   bot.cache.messages = {
     channelIDs: new Collection<bigint, bigint>(),
     memory: new Collection<bigint, T["message"]>(),
-    get: async function (id: BigString): Promise<T["message"] | undefined> {
+    get: async function (id: BigString, channelId?: BigString, guildId?: BigString): Promise<T["message"] | undefined> {
       // Force into bigint form
       const messageID = BigInt(id);
 
@@ -610,9 +737,21 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory.messages || !options.getItem) return;
 
       const stored = await options.getItem<T["message"]>("message", messageID);
-      if (stored && options.cacheInMemory.messages)
+      if (stored && options.cacheInMemory.messages) {
         bot.cache.messages.memory.set(messageID, stored);
-      return stored;
+      }
+
+      if (stored) return stored;
+
+      if (options.fetchIfMissing?.messages && channelId && guildId) {
+        return fetchers.fetchMessage(messageID, BigInt(guildId), BigInt(channelId));
+      }
+
+      if (options.fetchIfMissing?.channels) {
+        console.error(new Error('"fetchIfMissing?.messages" is set to true but guild ID or channel ID was not provided'));
+      }
+
+      return;
     },
     set: async function (message: T["message"]): Promise<void> {
       if (
@@ -983,6 +1122,7 @@ export interface CreateProxyCacheOptions {
     roles?: boolean,
     channels?: boolean,
     members?: boolean,
+    messages?: boolean,
   }
 }
 
