@@ -1,7 +1,8 @@
 # cache-proxy-plugin
 
-This plugin adds support for caching for your bot. It provides two types of cache.
+For your bot, this plugin adds functionality for caching. It offers two different cache types.
+
 
 1. In Memory Cache (Crazy fast but lost whenever your bot restarts.)
-2. Persistent Cache (Crazy fast but slower than memory. Not lost unless you restart your cache.)
-3. 
+
+2. Persistent Cache (Slower than memory, but still crazy fast. Unless you restart your cache, nothing is lost.)

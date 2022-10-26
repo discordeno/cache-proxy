@@ -10,10 +10,12 @@ import {
   Role,
   User,
 } from "discordeno";
+import { BotWithProxyEvents } from "./events";
 import { setupCacheEdits } from "./setupCacheEdits";
 import { setupCacheRemovals } from "./setupCacheRemovals";
 
 export interface ProxyCacheProps<T extends ProxyCacheTypes> {
+  events: BotWithProxyEvents;
   cache: Bot["cache"] & {
     options: CreateProxyCacheOptions;
     guilds: {
@@ -60,13 +62,16 @@ export interface ProxyCacheProps<T extends ProxyCacheTypes> {
 
 export type BotWithProxyCache<
   T extends ProxyCacheTypes,
-  B extends Bot = Bot
+  B extends Bot = Bot,
 > = Omit<B, "cache"> & ProxyCacheProps<T>;
 
 export function createProxyCache<
   T extends ProxyCacheTypes<boolean> = ProxyCacheTypes,
-  B extends Bot = Bot
+  B extends Bot = Bot,
 >(rawBot: B, options: CreateProxyCacheOptions): BotWithProxyCache<T, B> {
+  console.warn(
+    "Cache with Proxy is still in development and there maybe bugs. So test it before deploying to production.",
+  );
   // @ts-ignore why is this failing?
   const bot = rawBot as BotWithProxyCache<T, B>;
 
@@ -74,10 +79,12 @@ export function createProxyCache<
 
   bot.cache.options = options;
 
-  if (!bot.cache.options.cacheInMemory)
+  if (!bot.cache.options.cacheInMemory) {
     bot.cache.options.cacheInMemory = { default: true };
-  if (!bot.cache.options.cacheOutsideMemory)
+  }
+  if (!bot.cache.options.cacheOutsideMemory) {
     bot.cache.options.cacheOutsideMemory = { default: false };
+  }
 
   const cacheInMemoryDefault = bot.cache.options.cacheInMemory.default;
   const cacheOutsideMemoryDefault =
@@ -126,10 +133,11 @@ export function createProxyCache<
           guild.roles?.delete(id);
           // Each memwho has this role needs to be edited and the role id removed
           guild.members?.forEach((member: { roles: bigint[] }) => {
-            if (member.roles?.includes(id))
+            if (member.roles?.includes(id)) {
               member.roles = member.roles.filter(
-                (roleID: bigint) => roleID !== id
+                (roleID: bigint) => roleID !== id,
               );
+            }
           });
         }
       }
@@ -138,8 +146,9 @@ export function createProxyCache<
 
       // if members are stored outside guilds, then each member itself needs to remove the role id that was deleted.
       bot.cache.members.memory.forEach((member) => {
-        if (member.roles?.includes(id))
+        if (member.roles?.includes(id)) {
           member.roles = member.roles.filter((roleID: bigint) => roleID !== id);
+        }
       });
     },
     removeMessages: async function (ids: bigint[]) {
@@ -198,7 +207,7 @@ export function createProxyCache<
       bot.cache.members.memory.forEach((member) => {
         if (member.guildId === id) {
           bot.cache.members.memory.delete(
-            BigInt(`${member.id}${member.guildID}`)
+            BigInt(`${member.id}${member.guildID}`),
           );
         }
       });
@@ -216,8 +225,9 @@ export function createProxyCache<
   if (removeChannel || !replaceInternalBulkRemover?.channel) {
     bot.cache.options.bulk.removeChannel = async function (id) {
       // If replaceInternalBulkRemover.channel is not set to true, run internal channel bulk remover
-      if (!replaceInternalBulkRemover?.channel)
+      if (!replaceInternalBulkRemover?.channel) {
         await internalBulkRemover.removeChannel(id);
+      }
       // If user passed bulk.removeChannel, run passed bulk remover
       await removeChannel?.(id);
     };
@@ -227,8 +237,9 @@ export function createProxyCache<
   if (removeRole || !replaceInternalBulkRemover?.role) {
     bot.cache.options.bulk.removeRole = async function (id) {
       // If replaceInternalBulkRemover.role is not set to true, run internal role bulk remover
-      if (!replaceInternalBulkRemover?.role)
+      if (!replaceInternalBulkRemover?.role) {
         await internalBulkRemover.removeRole(id);
+      }
       // If user passed bulk.removeRole, run passed bulk remover
       await removeRole?.(id);
     };
@@ -238,8 +249,9 @@ export function createProxyCache<
   if (removeMessages || !replaceInternalBulkRemover?.messages) {
     bot.cache.options.bulk.removeMessages = async function (id) {
       // If replaceInternalBulkRemover.message is not set to true, run internal messages bulk remover
-      if (!replaceInternalBulkRemover?.messages)
+      if (!replaceInternalBulkRemover?.messages) {
         await internalBulkRemover.removeMessages(id);
+      }
       // If user passed bulk.removeMessages, run passed bulk remover
       await removeMessages?.(id);
     };
@@ -249,8 +261,9 @@ export function createProxyCache<
   if (removeGuild || !replaceInternalBulkRemover?.guild) {
     bot.cache.options.bulk.removeGuild = async function (id) {
       // If replaceInternalBulkRemover.guild is not set to true, run internal guild bulk remover
-      if (!replaceInternalBulkRemover?.guild)
+      if (!replaceInternalBulkRemover?.guild) {
         await internalBulkRemover.removeGuild(id);
+      }
       // If user passed bulk.removeGuild, run passed bulk remover
       await removeGuild?.(id);
     };
@@ -263,14 +276,18 @@ export function createProxyCache<
       const guildID = BigInt(id);
 
       // If available in memory, use it.
-      if (options.cacheInMemory?.guilds && bot.cache.guilds.memory.has(guildID))
+      if (
+        options.cacheInMemory?.guilds && bot.cache.guilds.memory.has(guildID)
+      ) {
         return bot.cache.guilds.memory.get(guildID);
+      }
       // Otherwise try to get from non-memory cache
       if (!options.cacheOutsideMemory?.guilds || !options.getItem) return;
 
       const stored = await options.getItem<T["guild"]>("guild", guildID);
-      if (stored && options.cacheInMemory?.guilds)
+      if (stored && options.cacheInMemory?.guilds) {
         bot.cache.guilds.memory.set(guildID, stored);
+      }
       return stored;
     },
     set: async function (guild: T["guild"]): Promise<void> {
@@ -278,14 +295,17 @@ export function createProxyCache<
       if (
         options.shouldCache?.guild &&
         !(await options.shouldCache.guild(guild))
-      )
+      ) {
         return;
+      }
       // If user wants memory cache, we cache it
-      if (options.cacheInMemory?.guilds)
+      if (options.cacheInMemory?.guilds) {
         bot.cache.guilds.memory.set(guild.id, guild);
+      }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.guilds)
+      if (options.cacheOutsideMemory?.guilds) {
         if (options.setItem) await options.setItem("guild", guild);
+      }
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -304,26 +324,33 @@ export function createProxyCache<
       const userID = BigInt(id);
 
       // If available in memory, use it.
-      if (options.cacheInMemory?.users && bot.cache.users.memory.has(userID))
+      if (options.cacheInMemory?.users && bot.cache.users.memory.has(userID)) {
         return bot.cache.users.memory.get(userID);
+      }
       // Otherwise try to get from non-memory cache
       if (!options.cacheOutsideMemory?.users || !options.getItem) return;
 
       const stored = await options.getItem<T["user"]>("user", userID);
-      if (stored && options.cacheInMemory?.users)
+      if (stored && options.cacheInMemory?.users) {
         bot.cache.users.memory.set(userID, stored);
+      }
       return stored;
     },
     set: async function (user: T["user"]): Promise<void> {
-      if (options.shouldCache?.user && !(await options.shouldCache.user(user)))
+      if (
+        options.shouldCache?.user && !(await options.shouldCache.user(user))
+      ) {
         return;
+      }
 
       // If user wants memory cache, we cache it
-      if (options.cacheInMemory?.users)
+      if (options.cacheInMemory?.users) {
         bot.cache.users.memory.set(user.id, user);
+      }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.users)
+      if (options.cacheOutsideMemory?.users) {
         if (options.setItem) await options.setItem("user", user);
+      }
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -363,13 +390,17 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory?.roles || !options.getItem) return;
 
       const stored = await options.getItem<T["role"]>("role", roleID);
-      if (stored && options.cacheInMemory?.roles)
+      if (stored && options.cacheInMemory?.roles) {
         bot.cache.roles.memory.set(roleID, stored);
+      }
       return stored;
     },
     set: async function (role: T["role"]): Promise<void> {
-      if (options.shouldCache?.role && !(await options.shouldCache.role(role)))
+      if (
+        options.shouldCache?.role && !(await options.shouldCache.role(role))
+      ) {
         return;
+      }
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory?.roles) {
@@ -380,19 +411,22 @@ export function createProxyCache<
           if (guildID) {
             const guild = bot.cache.guilds.memory.get(guildID);
             if (guild) guild.roles.set(role.id, role);
-            else
+            else {
               console.warn(
-                `[CACHE] Can't cache role(${role.id}) since guild.roles is enabled but a guild (${guildID}) was not found`
+                `[CACHE] Can't cache role(${role.id}) since guild.roles is enabled but a guild (${guildID}) was not found`,
               );
-          } else
+            }
+          } else {
             console.warn(
-              `[CACHE] Can't cache role(${role.id}) since guild.roles is enabled but a guild id was not found.`
+              `[CACHE] Can't cache role(${role.id}) since guild.roles is enabled but a guild id was not found.`,
             );
+          }
         } else bot.cache.roles.memory.set(role.id, role);
       }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.roles)
+      if (options.cacheOutsideMemory?.roles) {
         if (options.setItem) await options.setItem("role", role);
+      }
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -412,7 +446,7 @@ export function createProxyCache<
     memory: new Collection<bigint, T["member"]>(),
     get: async function (
       id: BigString,
-      guildId: BigString
+      guildId: BigString,
     ): Promise<T["member"] | undefined> {
       // Force into bigint form
       const memberID = BigInt(id);
@@ -440,18 +474,20 @@ export function createProxyCache<
       const stored = await options.getItem<T["member"]>(
         "member",
         memberID,
-        guildID
+        guildID,
       );
-      if (stored && options.cacheInMemory?.members)
+      if (stored && options.cacheInMemory?.members) {
         bot.cache.members.memory.set(BigInt(`${memberID}${guildId}`), stored);
+      }
       return stored;
     },
     set: async function (member: T["member"]): Promise<void> {
       if (
         options.shouldCache?.member &&
         !(await options.shouldCache.member(member))
-      )
+      ) {
         return;
+      }
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory?.members) {
@@ -459,23 +495,27 @@ export function createProxyCache<
           if (member.guildId) {
             const guild = bot.cache.guilds.memory.get(member.guildId);
             if (guild) guild.members.set(member.id, member);
-            else
+            else {
               console.warn(
-                `[CACHE] Can't cache member(${member.id}) since guild.members is enabled but a guild (${member.guildId}) was not found`
+                `[CACHE] Can't cache member(${member.id}) since guild.members is enabled but a guild (${member.guildId}) was not found`,
               );
-          } else
+            }
+          } else {
             console.warn(
-              `[CACHE] Can't cache member(${member.id}) since guild.members is enabled but a guild id was not found.`
+              `[CACHE] Can't cache member(${member.id}) since guild.members is enabled but a guild id was not found.`,
             );
-        } else
+          }
+        } else {
           bot.cache.members.memory.set(
             BigInt(`${member.id}${member.guildId}`),
-            member
+            member,
           );
+        }
       }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.members)
+      if (options.cacheOutsideMemory?.members) {
         if (options.setItem) await options.setItem("member", member);
+      }
     },
     delete: async function (id: BigString, guildId: BigString): Promise<void> {
       // Force id to bigint
@@ -486,8 +526,9 @@ export function createProxyCache<
       bot.cache.members.memory.delete(BigInt(`${memberID}${guildId}`));
       bot.cache.guilds.memory.get(guildID)?.members?.delete(memberID);
       // Remove from non-memory cache
-      if (options.removeItem)
+      if (options.removeItem) {
         await options.removeItem("member", memberID, guildID);
+      }
     },
   };
 
@@ -523,40 +564,46 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory?.channels || !options.getItem) return;
 
       const stored = await options.getItem<T["channel"]>("channel", channelID);
-      if (stored && options.cacheInMemory?.channels)
+      if (stored && options.cacheInMemory?.channels) {
         bot.cache.channels.memory.set(channelID, stored);
+      }
       return stored;
     },
     set: async function (channel: T["channel"]): Promise<void> {
       if (
         options.shouldCache?.channel &&
         !(await options.shouldCache.channel(channel))
-      )
+      ) {
         return;
+      }
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory?.channels) {
-        if (channel.guildId)
+        if (channel.guildId) {
           bot.cache.channels.guildIDs.set(channel.id, channel.guildId);
+        }
 
         if (options.cacheInMemory?.guilds) {
           const guildID = bot.cache.channels.guildIDs.get(channel.id);
           if (guildID) {
             const guild = bot.cache.guilds.memory.get(guildID);
             if (guild) guild.channels.set(channel.id, channel);
-            else
+            else {
               console.warn(
-                `[CACHE] Can't cache channel(${channel.id}) since guild.channels is enabled but a guild (${guildID}) was not found`
+                `[CACHE] Can't cache channel(${channel.id}) since guild.channels is enabled but a guild (${guildID}) was not found`,
               );
-          } else
+            }
+          } else {
             console.warn(
-              `[CACHE] Can't cache channel(${channel.id}) since guild.channels is enabled but a guild id was not found.`
+              `[CACHE] Can't cache channel(${channel.id}) since guild.channels is enabled but a guild id was not found.`,
             );
+          }
         } else bot.cache.channels.memory.set(channel.id, channel);
       }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.channels)
+      if (options.cacheOutsideMemory?.channels) {
         if (options.setItem) await options.setItem("channel", channel);
+      }
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -586,8 +633,7 @@ export function createProxyCache<
           const channelID = bot.cache.messages.channelIDs.get(messageID);
           if (channelID) {
             const guildID = bot.cache.channels.guildIDs.get(channelID);
-            const channel =
-              bot.cache.guilds.memory.get(guildID!)?.channel ??
+            const channel = bot.cache.guilds.memory.get(guildID!)?.channel ??
               bot.cache.channels.memory.get(channelID);
             if (channel) {
               const message = channel.messages.cache.get(messageID);
@@ -606,40 +652,46 @@ export function createProxyCache<
       if (!options.cacheOutsideMemory?.messages || !options.getItem) return;
 
       const stored = await options.getItem<T["message"]>("message", messageID);
-      if (stored && options.cacheInMemory?.messages)
+      if (stored && options.cacheInMemory?.messages) {
         bot.cache.messages.memory.set(messageID, stored);
+      }
       return stored;
     },
     set: async function (message: T["message"]): Promise<void> {
       if (
         options.shouldCache?.message &&
         !(await options.shouldCache.message(message))
-      )
+      ) {
         return;
+      }
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory?.messages) {
         if (options.cacheInMemory?.guilds) {
-          if (message.channelId)
+          if (message.channelId) {
             bot.cache.messages.channelIDs.set(message.id, message.channelId);
+          }
 
           const guildID = bot.cache.messages.channelIDs.get(message.id);
           if (guildID) {
             const guild = bot.cache.guilds.memory.get(guildID);
             if (guild) guild.messages.set(message.id, message);
-            else
+            else {
               console.warn(
-                `[CACHE] Can't cache message(${message.id}) since guild.messages is enabled but a guild (${guildID}) was not found`
+                `[CACHE] Can't cache message(${message.id}) since guild.messages is enabled but a guild (${guildID}) was not found`,
               );
-          } else
+            }
+          } else {
             console.warn(
-              `[CACHE] Can't cache message(${message.id}) since guild.messages is enabled but a guild id was not found.`
+              `[CACHE] Can't cache message(${message.id}) since guild.messages is enabled but a guild id was not found.`,
             );
+          }
         } else bot.cache.messages.memory.set(message.id, message);
       }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.messages)
+      if (options.cacheOutsideMemory?.messages) {
         if (options.setItem) await options.setItem("message", message);
+      }
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -668,9 +720,9 @@ export function createProxyCache<
 
     for (const key of keys) {
       // ID prop is required. Desired props take priority.
-      if (key === "id" || options.desiredProps?.users?.includes(key))
+      if (key === "id" || options.desiredProps?.users?.includes(key)) {
         args[key] = old[key];
-      // If undesired we skip
+      } // If undesired we skip
       else if (options.undesiredProps?.users?.includes(key)) continue;
       // If user did not say this is undesired and did not provide any desired props we accept it
       else if (!options.desiredProps?.users?.length) args[key] = old[key];
@@ -723,9 +775,9 @@ export function createProxyCache<
 
     for (const key of keys) {
       // ID is required. Desired props take priority.
-      if (key === "id" || options.desiredProps?.guilds?.includes(key))
+      if (key === "id" || options.desiredProps?.guilds?.includes(key)) {
         args[key] = old[key];
-      // If undesired we skip
+      } // If undesired we skip
       else if (options.undesiredProps?.guilds?.includes(key)) continue;
       // If guild did not say this is undesired and did not provide any desired props we accept it
       else if (!options.desiredProps?.guilds?.length) args[key] = old[key];
@@ -748,9 +800,9 @@ export function createProxyCache<
 
     for (const key of keys) {
       // ID is required. Desired props take priority.
-      if (key === "id" || options.desiredProps?.channels?.includes(key))
+      if (key === "id" || options.desiredProps?.channels?.includes(key)) {
         args[key] = old[key];
-      // If undesired we skip
+      } // If undesired we skip
       else if (options.undesiredProps?.channels?.includes(key)) continue;
       // If channel did not say this is undesired and did not provide any desired props we accept it
       else if (!options.desiredProps?.channels?.length) args[key] = old[key];
@@ -772,9 +824,9 @@ export function createProxyCache<
 
     for (const key of keys) {
       // ID is required. Desired props take priority.
-      if (key === "id" || options.desiredProps?.members?.includes(key))
+      if (key === "id" || options.desiredProps?.members?.includes(key)) {
         args[key] = old[key];
-      // If undesired we skip
+      } // If undesired we skip
       else if (options.undesiredProps?.members?.includes(key)) continue;
       // If member did not say this is undesired and did not provide any desired props we accept it
       else if (!options.desiredProps?.members?.length) args[key] = old[key];
@@ -796,9 +848,9 @@ export function createProxyCache<
 
     for (const key of keys) {
       // ID is required. Desired props take priority.
-      if (key === "id" || options.desiredProps?.roles?.includes(key))
+      if (key === "id" || options.desiredProps?.roles?.includes(key)) {
         args[key] = old[key];
-      // If undesired we skip
+      } // If undesired we skip
       else if (options.undesiredProps?.roles?.includes(key)) continue;
       // If role did not say this is undesired and did not provide any desired props we accept it
       else if (!options.desiredProps?.roles?.length) args[key] = old[key];
@@ -820,9 +872,9 @@ export function createProxyCache<
 
     for (const key of keys) {
       // ID is required. Desired props take priority.
-      if (key === "id" || options.desiredProps?.messages?.includes(key))
+      if (key === "id" || options.desiredProps?.messages?.includes(key)) {
         args[key] = old[key];
-      // If undesired we skip
+      } // If undesired we skip
       else if (options.undesiredProps?.messages?.includes(key)) continue;
       // If message did not say this is undesired and did not provide any desired props we accept it
       else if (!options.desiredProps?.messages?.length) args[key] = old[key];
@@ -942,7 +994,7 @@ export interface CreateProxyCacheOptions {
   /** Handler to set an object in a specific table. */
   setItem?: (
     table: "guild" | "channel" | "role" | "member" | "message" | "user",
-    item: any
+    item: any,
   ) => Promise<unknown>;
   /** Handler to delete an object in a specific table. */
   removeItem?: (
