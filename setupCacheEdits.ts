@@ -153,8 +153,7 @@ export function setupCacheEdits<B extends Bot>(
     await bot.cache.channels.set(channel);
 
     //Send the event.
-    bot.events.CHANNEL_UPDATE_WITH_OLD_CHANNEL(bot, oldChannel!, channel);
-
+    bot.events.channelUpdateWithOldChannel(bot, oldChannel!, channel);
     CHANNEL_UPDATE(bot, data, shardId);
   };
 
@@ -166,7 +165,7 @@ export function setupCacheEdits<B extends Bot>(
     await bot.cache.messages.set(message);
 
     //Send the event.
-    bot.events.MESSAGE_UPDATE_WITH_OLD_MESSAGE(bot, oldMessage!, message);
+    bot.events.messageUpdateWithOldMessage(bot, oldMessage!, message);
 
     MESSAGE_UPDATE(bot, data, shardId);
   };
@@ -182,7 +181,7 @@ export function setupCacheEdits<B extends Bot>(
     await bot.cache.guilds.set(guild);
 
     //Send the event.
-    bot.events.GUILD_UPDATE_WITH_OLD_GUILD(bot, oldGuild!, guild);
+    bot.events.guildUpdateWithOldGuild(bot, oldGuild!, guild);
 
     GUILD_UPDATE(bot, data, shardId);
   };
@@ -197,7 +196,7 @@ export function setupCacheEdits<B extends Bot>(
     const oldRole = await bot.cache.roles.get(role.id);
     await bot.cache.roles.set(role);
     //Send the event.
-    bot.events.GUILD_ROLE_UPDATE_WITH_OLD_ROLE(bot, oldRole!, role);
+    bot.events.guildRoleUpdateWithOldRole(bot, oldRole!, role);
     GUILD_ROLE_UPDATE(bot, data, shardId);
   };
 
@@ -215,7 +214,7 @@ export function setupCacheEdits<B extends Bot>(
     );
     await bot.cache.members.set(member);
     //Send the event.
-    bot.events.GUILD_MEMBER_UPDATE_WITH_OLD_MEMBER(bot, oldMember!, member);
+    bot.events.guildMemberUpdateWithOldMember(bot, oldMember!, member);
     GUILD_MEMBER_UPDATE(bot, data, shardId);
   };
 
@@ -228,7 +227,7 @@ export function setupCacheEdits<B extends Bot>(
 
     await bot.cache.users.set(user);
 
-    bot.events.USER_UPDATE_WITH_OLD_USER(bot, oldUser!, user);
+    bot.events.userUpdateWithOldUser(bot, oldUser!, user);
     USER_UPDATE(bot, data, shardId);
   };
 }

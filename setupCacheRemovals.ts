@@ -11,7 +11,7 @@ import {
 import { BotWithProxyCache, ProxyCacheTypes } from "./index.js";
 
 export function setupCacheRemovals<B extends Bot>(
-  bot: BotWithProxyCache<ProxyCacheTypes, B>,
+  bot: BotWithProxyCache<ProxyCacheTypes, B>
 ) {
   const {
     CHANNEL_DELETE,
@@ -45,20 +45,14 @@ export function setupCacheRemovals<B extends Bot>(
     const payload = data.d as DiscordGuildMemberRemove;
     GUILD_MEMBER_REMOVE(bot, data, shardId);
 
-    bot.cache.members.delete(
-      bot.transformers.snowflake(payload.user.id),
-      bot.transformers.snowflake(payload.guild_id),
-    );
+    bot.cache.members.delete(bot.transformers.snowflake(payload.user.id), bot.transformers.snowflake(payload.guild_id));
   };
 
   bot.handlers.GUILD_BAN_ADD = function (_, data, shardId) {
     const payload = data.d as DiscordGuildBanAddRemove;
     GUILD_BAN_ADD(bot, data, shardId);
 
-    bot.cache.members.delete(
-      bot.transformers.snowflake(payload.user.id),
-      bot.transformers.snowflake(payload.guild_id),
-    );
+    bot.cache.members.delete(bot.transformers.snowflake(payload.user.id), bot.transformers.snowflake(payload.guild_id));
   };
 
   // TODO: fix emojis. For now deal with it lazy people or make ur own cache proxy plugin :)
@@ -84,7 +78,7 @@ export function setupCacheRemovals<B extends Bot>(
 
     // Use .then() strategy to keep this function sync but also no point deleting if its not in cache :bigbrain:
     bot.cache.messages.get(id).then((message) => {
-      // DON'T RUN INTERNAL HANDLER since internal does not pass `message`
+        // DON'T RUN INTERNAL HANDLER since internal does not pass `message`
       bot.events.messageDelete(
         bot,
         {
@@ -94,7 +88,7 @@ export function setupCacheRemovals<B extends Bot>(
             ? bot.transformers.snowflake(payload.guild_id)
             : undefined,
         },
-        message,
+        message
       );
 
       bot.cache.messages.delete(id);
@@ -105,9 +99,7 @@ export function setupCacheRemovals<B extends Bot>(
     const payload = data.d as DiscordMessageDeleteBulk;
 
     // i have headaches, i need a break
-    bot.cache.options.bulk?.removeMessages?.(
-      payload.ids.map((id) => bot.transformers.snowflake(id)),
-    );
+    bot.cache.options.bulk?.removeMessages?.(payload.ids.map(id => bot.transformers.snowflake(id)));
 
     MESSAGE_DELETE_BULK(bot, data, shardId);
   };

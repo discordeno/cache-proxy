@@ -19,32 +19,32 @@ export type Events = {
 };
 
 export interface BotWithProxyEvents extends Events {
-  CHANNEL_UPDATE_WITH_OLD_CHANNEL(
+  channelUpdateWithOldChannel(
     bot: BotWithProxyCache<ProxyCacheTypes, Bot>,
     oldChannel: Channel,
     newChannel: Channel,
   ): unknown;
-  MESSAGE_UPDATE_WITH_OLD_MESSAGE(
+  messageUpdateWithOldMessage(
     bot: BotWithProxyCache<ProxyCacheTypes, Bot>,
     oldChannel: Message,
     newChannel: Message,
   ): unknown;
-  GUILD_UPDATE_WITH_OLD_GUILD(
+  guildUpdateWithOldGuild(
     bot: BotWithProxyCache<ProxyCacheTypes, Bot>,
     oldChannel: Guild,
     newChannel: Guild,
   ): unknown;
-  GUILD_ROLE_UPDATE_WITH_OLD_ROLE(
+  guildRoleUpdateWithOldRole(
     bot: BotWithProxyCache<ProxyCacheTypes, Bot>,
     oldRole: Role,
     newRole: Role,
   ): unknown;
-  GUILD_MEMBER_UPDATE_WITH_OLD_MEMBER(
+  guildMemberUpdateWithOldMember(
     bot: BotWithProxyCache<ProxyCacheTypes, Bot>,
     oldMember: Member,
     newMember: Member,
   ): unknown;
-  USER_UPDATE_WITH_OLD_USER(
+  userUpdateWithOldUser(
     bot: BotWithProxyCache<ProxyCacheTypes, Bot>,
     oldUser: User,
     newUser: User,
