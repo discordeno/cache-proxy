@@ -10,10 +10,12 @@ import {
   Role,
   User,
 } from "discordeno";
+import { BotWithProxyEvents } from "./events";
 import { setupCacheEdits } from "./setupCacheEdits";
 import { setupCacheRemovals } from "./setupCacheRemovals";
 
 export interface ProxyCacheProps<T extends ProxyCacheTypes> {
+  events: BotWithProxyEvents;
   cache: Bot["cache"] & {
     options: CreateProxyCacheOptions;
     guilds: {
