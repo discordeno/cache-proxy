@@ -10,6 +10,7 @@ import {
   Role,
   User,
 } from "discordeno";
+import { setupCacheCreations } from "./setupCacheCreations";
 import { setupCacheEdits, unavailablesGuilds } from "./setupCacheEdits";
 import { setupCacheRemovals } from "./setupCacheRemovals";
 
@@ -132,10 +133,8 @@ export function createProxyCache<
 
       const guildID = bot.cache.roles.guildIDs.get(id);
       if (guildID) {
-        // Get the guild if its in cache
-        let guild = bot.cache.guilds.memory.get(guildID);
-        // Call the Fetcher if its not in cache
-        if (!guild) guild = await fetchers.fetchGuild(guildID)
+        // Get the guild if its in cache and Call the Fetcher if its not in cache
+        const guild = bot.cache.guilds.memory.get(guildID) ?? bot.cache.guilds.memory.get(guildID);
         if (guild) {
           // if roles are stored inside the guild remove it
           guild.roles?.delete(id);
@@ -162,8 +161,7 @@ export function createProxyCache<
       if (channelID) {
         const guildID = bot.cache.channels.guildIDs.get(channelID);
         if (guildID) {
-          let guild = bot.cache.guilds.memory.get(guildID);
-          if (!guild) guild = await fetchers.fetchGuild(guildID)
+        const guild = bot.cache.guilds.memory.get(guildID) ?? bot.cache.guilds.memory.get(guildID);
           if (guild) {
             const channel = guild.channels.get(channelID);
             if (channel) for (const id of ids) channel.messages?.delete(id);
@@ -222,86 +220,71 @@ export function createProxyCache<
   };
 
   const fetchers = {
-    fetchGuild: async (id: bigint) => {
+    fetchGuild: async (id: bigint, getMemory?: boolean): 
+    Promise<NonNullable<Awaited<T["guild"]>> | undefined> => {
       // Return nothing if we don't want fetching
       if (!options.fetchIfMissing?.guilds) return;
       // Check if Guild is unavailable
       if (unavailablesGuilds.has(id)) return;
+      
       // Fetch Guild through Helpers
       const guild = await bot.helpers.getGuild(id);
-      // Return nothing if no Guild could be fetched
-      if (!guild) return;
+
       // Set Guild in cache
       await bot.cache.guilds.set(guild);
+
+      // Some function calls accept memory data, so lets return that instead
+      if (getMemory) return bot.cache.guilds.memory.get(id);
       // Return from cache so we dont have to handle stuff like shouldCache twice
       return bot.cache.guilds.get(id);
     },
     fetchRole: async (guildId: bigint, roleId: bigint) => {
-      // Return nothing if we don't want fetching
       if (!options.fetchIfMissing?.roles) return;
-      // Check if Guild is unavailable
       if (unavailablesGuilds.has(guildId)) return;
-      // Fetch Roles through Helpers
+
       const roles = await bot.helpers.getRoles(guildId);
-      // Return nothing if no Roles could be fetched
-      if (!roles) return;
-      // Set Roles in cache
+
       await Promise.all(roles.map((r) => bot.cache.roles.set(r)));
-      // Return from cache so we dont have to handle stuff like shouldCache twice
+
       return bot.cache.roles.get(roleId);
     },
     fetchChannel: async (guildId: bigint, channelId: bigint) => {
-      // Return nothing if we don't want fetching
       if (!options.fetchIfMissing?.channels) return;
-      // Check if Guild is unavailable
       if (unavailablesGuilds.has(guildId)) return;
-      // Fetch Channel through Helpers
+
       const channel = await bot.helpers.getChannel(channelId);
-      // Return nothing if no Channels could be fetched
-      if (!channel) return;
-      // Set channel in cache
+
       await bot.cache.channels.set(channel)
-      // Return from cache so we dont have to handle stuff like shouldCache twice
+
       return bot.cache.channels.get(channelId);
     },
     fetchMember: async (guildId: bigint, memberId: bigint) => {
-      // Return nothing if we don't want fetching
       if (!options.fetchIfMissing?.members) return;
-      // Check if Guild is unavailable
       if (unavailablesGuilds.has(guildId)) return;
-      // Fetch Member through Helpers
+
       const member = await bot.helpers.getMember(guildId, memberId);
-      // Return nothing if no Member could be fetched
-      if (!member) return;
-      // Set Member in cache
+
       await bot.cache.members.set(member)
-      // Return from cache so we dont have to handle stuff like shouldCache twice
+
       return bot.cache.members.get(memberId, guildId);
     },
     fetchUser: async (userId: bigint) => {
-      // Return nothing if we don't want fetching
       if (!options.fetchIfMissing?.users) return;
-      // Fetch User through Helpers
+
       const user = await bot.helpers.getUser(userId);
-      // Return nothing if no User could be fetched
-      if (!user) return;
-      // Set User in cache
+
       await bot.cache.users.set(user)
-      // Return from cache so we dont have to handle stuff like shouldCache twice
+
       return bot.cache.users.get(userId);
     },
     fetchMessage: async (messageId: bigint, guildId: bigint, channelId: bigint) => {
-      // Return nothing if we don't want fetching
       if (!options.fetchIfMissing?.messages) return;
-      // Check if Guild is unavailable
       if (unavailablesGuilds.has(guildId)) return;
-      // Fetch Message through Helpers
+
       const message = await bot.helpers.getMessage(channelId, messageId);
-      // Return nothing if no Message could be fetched
-      if (!message) return;
-      // Set Message in cache
+
       await bot.cache.messages.set(message)
-      // Return from cache so we dont have to handle stuff like shouldCache twice
+
       return bot.cache.messages.get(messageId);
     }
   }
@@ -502,8 +485,7 @@ export function createProxyCache<
         if (options.cacheInMemory?.guilds) {
           const guildID = bot.cache.roles.guildIDs.get(role.id);
           if (guildID) {
-            let guild = bot.cache.guilds.memory.get(guildID);
-            if (!guild) guild = await fetchers.fetchGuild(guildID)
+            const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
             if (guild) guild.roles.set(role.id, role);
             else
               console.warn(
@@ -590,8 +572,7 @@ export function createProxyCache<
       if (options.cacheInMemory?.members) {
         if (options.cacheInMemory?.guilds) {
           if (member.guildId) {
-            let guild = bot.cache.guilds.memory.get(member.guildId); 
-            if (!guild) guild = await fetchers.fetchGuild(member.guildId)
+            const guild = bot.cache.guilds.memory.get(member.guildId) ?? await fetchers.fetchGuild(member.guildId, true);
             if (guild) guild.members.set(member.id, member);
             else
               console.warn(
@@ -691,8 +672,7 @@ export function createProxyCache<
         if (options.cacheInMemory?.guilds) {
           const guildID = bot.cache.channels.guildIDs.get(channel.id);
           if (guildID) {
-            let guild = bot.cache.guilds.memory.get(guildID);
-            if (!guild) guild = await fetchers.fetchGuild(guildID);
+            const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
             if (guild) guild.channels.set(channel.id, channel);
             else
               console.warn(
@@ -766,7 +746,7 @@ export function createProxyCache<
         return fetchers.fetchMessage(messageID, BigInt(guildId), BigInt(channelId));
       }
 
-      if (options.fetchIfMissing?.channels) {
+      if (options.fetchIfMissing?.messages) {
         console.error(new Error('"fetchIfMissing?.messages" is set to true but guild ID or channel ID was not provided'));
       }
 
@@ -787,8 +767,7 @@ export function createProxyCache<
 
           const guildID = bot.cache.messages.channelIDs.get(message.id);
           if (guildID) {
-            let guild = bot.cache.guilds.memory.get(guildID);
-            if (!guild) guild = await fetchers.fetchGuild(guildID);
+            const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
             if (guild) guild.messages.set(message.id, message);
             else
               console.warn(
@@ -999,6 +978,7 @@ export function createProxyCache<
 
   setupCacheRemovals(bot);
   setupCacheEdits(bot);
+  setupCacheCreations(bot);
 
   return bot;
 }
