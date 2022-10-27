@@ -9,6 +9,7 @@ import {
   DiscordUnavailableGuild,
 } from "discordeno";
 import { BotWithProxyCache, ProxyCacheTypes } from "./index.js";
+import { unavailablesGuilds } from './setupCacheEdits.js'
 
 export function setupCacheRemovals<B extends Bot>(
   bot: BotWithProxyCache<ProxyCacheTypes, B>
@@ -28,6 +29,9 @@ export function setupCacheRemovals<B extends Bot>(
 
     // Remove the guild from cache
     bot.cache.options.bulk?.removeGuild?.(id);
+
+    // remove guild from unavailable Set
+    unavailablesGuilds.delete(id);
 
     GUILD_DELETE(bot, data, shardId);
   };
