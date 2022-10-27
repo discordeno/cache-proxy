@@ -4,6 +4,7 @@ import {
   DiscordGuild,
   DiscordGuildMemberAdd,
   DiscordGuildMemberRemove,
+  DiscordUnavailableGuild,
   DiscordGuildMemberUpdate,
   DiscordGuildRoleUpdate,
   DiscordMessage,
@@ -13,6 +14,8 @@ import {
   DiscordUser,
 } from "discordeno/types";
 import { BotWithProxyCache, ProxyCacheTypes } from "./index.js";
+
+export const unavailablesGuilds = new Set<bigint>()
 
 export function setupCacheEdits<B extends Bot>(
   bot: BotWithProxyCache<ProxyCacheTypes, B>,
@@ -229,5 +232,18 @@ export function setupCacheEdits<B extends Bot>(
 
     bot.events.userUpdateWithOldUser(bot, oldUser!, user);
     USER_UPDATE(bot, data, shardId);
+  };
+
+  bot.handlers.GUILD_UPDATE = function (_, data, shardId) {
+    const payload = data.d as DiscordUnavailableGuild;
+
+    const guildID = bot.transformers.snowflake(payload.id);
+
+    // If Guild isn't available push to Set
+    if (payload.unavailable) unavailablesGuilds.add(guildID);
+    // otherwise remove from Set
+    else unavailablesGuilds.delete(guildID)
+
+    GUILD_UPDATE(bot, data, shardId);
   };
 }
