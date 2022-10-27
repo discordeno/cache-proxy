@@ -12,9 +12,11 @@ import {
 } from "discordeno";
 import { setupCacheCreations } from "./setupCacheCreations";
 import { setupCacheEdits, unavailablesGuilds } from "./setupCacheEdits";
+import { BotWithProxyEvents } from "./events";
 import { setupCacheRemovals } from "./setupCacheRemovals";
 
 export interface ProxyCacheProps<T extends ProxyCacheTypes> {
+  events: BotWithProxyEvents;
   cache: Bot["cache"] & {
     options: CreateProxyCacheOptions;
     guilds: {
