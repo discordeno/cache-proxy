@@ -83,6 +83,7 @@ export function createProxyCache<
   T extends ProxyCacheTypes<boolean> = ProxyCacheTypes,
   B extends Bot = Bot
 >(rawBot: B, options: CreateProxyCacheOptions): BotWithProxyCache<T, B> {
+  console.warn("WARNING: This plugin is still under developement, so beware when using it. There maybe bugs.")
   // @ts-ignore why is this failing?
   const bot = rawBot as BotWithProxyCache<T, B>;
 
