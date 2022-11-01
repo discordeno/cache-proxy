@@ -59,7 +59,7 @@ export interface ProxyCacheProps<T extends ProxyCacheTypes> {
       /**
        * @param id Message ID
        * @param channelId Channel ID (Only required if option fetchIfMissing.messages is set to true)
-       * @param guildId Guild ID (Only required if option fetchIfMissing.messages is set to true)
+       * @param guildId Guild ID (Only required if option fetchIfMissing.messages is set to true and you want to fetch a guild message)
        */
       get: (id: bigint, channelId?: bigint, guildId?: bigint) => Promise<T["message"] | undefined>;
       set: (value: T["message"]) => Promise<void>;
