@@ -163,7 +163,7 @@ export function setupCacheEdits<B extends Bot>(
   bot.handlers.MESSAGE_UPDATE = async function (_, data, shardId) {
     const payload = data.d as DiscordMessage;
     const message = bot.transformers.message(bot, payload);
-    const oldMessage = await bot.cache.messages.get(message.id, undefined, undefined, true);
+    const oldMessage = await bot.cache.messages.get(message.id, undefined, undefined, false);
 
     await bot.cache.messages.set(message);
 
