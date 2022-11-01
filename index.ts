@@ -485,7 +485,7 @@ export function createProxyCache<
         if (role.guildId) bot.cache.roles.guildIDs.set(role.id, role.guildId);
 
         if (options.cacheInMemory?.guilds) {
-          const guildID = bot.cache.roles.guildIDs.get(role.id);
+          const guildID = role.guildId ?? bot.cache.roles.guildIDs.get(role.id);
           if (guildID) {
             const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
             if (guild) guild.roles.set(role.id, role);
@@ -672,7 +672,8 @@ export function createProxyCache<
           bot.cache.channels.guildIDs.set(channel.id, channel.guildId);
 
         if (options.cacheInMemory?.guilds) {
-          const guildID = bot.cache.channels.guildIDs.get(channel.id);
+          const guildID = channel.guilId ?? bot.cache.channels.guildIDs.get(channel.id);
+
           if (guildID) {
             const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
             if (guild) guild.channels.set(channel.id, channel);
@@ -767,12 +768,14 @@ export function createProxyCache<
           if (message.channelId)
             bot.cache.messages.channelIDs.set(message.id, message.channelId);
 
-          if (message.guildId) {
-            const guild = bot.cache.guilds.memory.get(message.guildId) ?? await fetchers.fetchGuild(message.guildId, true);
+          const channelID = message.channelId ?? bot.cache.messages.channelIDs.get(message.id);
+          const guildID = message.guildId ?? bot.cache.channels.guildIDs.get(channelID);
+          if (guildID) {
+            const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
             if (guild) guild.messages.set(message.id, message);
             else
               console.warn(
-                `[CACHE] Can't cache message(${message.id}) since guild.messages is enabled but a guild (${message.guildId}) was not found`
+                `[CACHE] Can't cache message(${message.id}) since guild.messages is enabled but a guild (${guildID}) was not found`
               );
           } else
             console.warn(
