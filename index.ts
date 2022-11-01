@@ -60,8 +60,9 @@ export interface ProxyCacheProps<T extends ProxyCacheTypes> {
        * @param id Message ID
        * @param channelId Channel ID (Only required if option fetchIfMissing.messages is set to true)
        * @param guildId Guild ID (Only required if option fetchIfMissing.messages is set to true and you want to fetch a guild message)
+       * @param noError Tells the fetcher not to error if an argument was not provided due to internal partial fetching
        */
-      get: (id: bigint, channelId?: bigint, guildId?: bigint) => Promise<T["message"] | undefined>;
+      get: (id: bigint, channelId?: bigint, guildId?: bigint, noError?: boolean) => Promise<T["message"] | undefined>;
       set: (value: T["message"]) => Promise<void>;
       delete: (id: bigint) => Promise<void>;
     };
@@ -709,7 +710,7 @@ export function createProxyCache<
   bot.cache.messages = {
     channelIDs: new Collection<bigint, bigint>(),
     memory: new Collection<bigint, T["message"]>(),
-    get: async function (id: BigString, channelId?: BigString, guildId?: BigString): Promise<T["message"] | undefined> {
+    get: async function (id: BigString, channelId?: BigString, guildId?: BigString, noError?: boolean): Promise<T["message"] | undefined> {
       // Force into bigint form
       const messageID = BigInt(id);
 
@@ -746,11 +747,14 @@ export function createProxyCache<
         if (stored) return stored;
       }
 
-      if (options.fetchIfMissing?.messages && channelId) {
-        return fetchers.fetchMessage(messageID, BigInt(channelId), guildId ? BigInt(guildId) : undefined);
+      const channelID = channelId ?? bot.cache.messages.channelIDs.get(BigInt(id));
+      if (options.fetchIfMissing?.messages && channelID) {
+        const guildID = guildId ?? channelID ? bot.cache.channels.guildIDs.get(BigInt(channelID)) : undefined;
+        return fetchers.fetchMessage(messageID, BigInt(channelID), guildID ? BigInt(guildID) : undefined);
       }
 
-      if (options.fetchIfMissing?.messages) {
+      // check if we even want to throw an error, in case of MESSAGE_UPDATE; where we want to get the old Message, we dont want an error
+      if (options.fetchIfMissing?.messages && !noError) {
         console.error(new Error('"fetchIfMissing?.messages" is set to true but guild ID or channel ID was not provided'));
       }
 
