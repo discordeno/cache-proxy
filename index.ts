@@ -266,7 +266,7 @@ export function createProxyCache<
 
       return bot.cache.roles.get(roleId);
     },
-    fetchChannel: async (channelId: bigint, guildId: bigint, fetch: boolean | undefined) => {
+    fetchChannel: async (channelId: bigint, guildId: bigint | undefined, fetch: boolean | undefined) => {
       if (fetch === false) return;
 
       if (guildId && unavailablesGuilds.has(guildId)) return;
@@ -397,8 +397,8 @@ export function createProxyCache<
       if (options.cacheInMemory?.guilds)
         bot.cache.guilds.memory.set(guild.id, guild);
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.guilds)
-        if (options.setItem) await options.setItem("guild", guild);
+      if (options.cacheOutsideMemory?.guilds && options.setItem)
+        await options.setItem("guild", guild);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -443,8 +443,8 @@ export function createProxyCache<
       if (options.cacheInMemory?.users)
         bot.cache.users.memory.set(user.id, user);
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.users)
-        if (options.setItem) await options.setItem("user", user);
+      if (options.cacheOutsideMemory?.users && options.setItem)
+        await options.setItem("user", user);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -515,9 +515,11 @@ export function createProxyCache<
         if (options.cacheInMemory?.guilds) {
           const guildID = role.guildId ?? bot.cache.roles.guildIDs.get(role.id);
           if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
-            if (guild) guild.roles.set(role.id, role);
-            else
+            const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true, true);
+            if (guild) {
+              if (!guild.roles) guild.roles = new Collection<bigint, Role>()
+              guild.roles.set(role.id, role);
+            } else
               console.warn(
                 `[CACHE] Can't cache role(${role.id}) since guild.roles is enabled but a guild (${guildID}) was not found`
               );
@@ -528,8 +530,8 @@ export function createProxyCache<
         } else bot.cache.roles.memory.set(role.id, role);
       }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.roles)
-        if (options.setItem) await options.setItem("role", role);
+      if (options.cacheOutsideMemory?.roles && options.setItem)
+        await options.setItem("role", role);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -587,7 +589,7 @@ export function createProxyCache<
       }
 
       if (options.fetchIfMissing?.members) {
-        fetchers.fetchMember(guildID, memberID, fetch);
+        return fetchers.fetchMember(guildID, memberID, fetch);
       }
 
       return
@@ -603,7 +605,7 @@ export function createProxyCache<
       if (options.cacheInMemory?.members) {
         if (options.cacheInMemory?.guilds) {
           if (member.guildId) {
-            const guild = bot.cache.guilds.memory.get(member.guildId) ?? await fetchers.fetchGuild(member.guildId, true, fetch);
+            const guild = bot.cache.guilds.memory.get(member.guildId) ?? await fetchers.fetchGuild(member.guildId, fetch, true);
             if (guild) guild.members.set(member.id, member);
             else
               console.warn(
@@ -620,8 +622,8 @@ export function createProxyCache<
           );
       }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.members)
-        if (options.setItem) await options.setItem("member", member);
+      if (options.cacheOutsideMemory?.members && options.setItem)
+        await options.setItem("member", member);
     },
     delete: async function (id: BigString, guildId: BigString): Promise<void> {
       // Force id to bigint
@@ -677,8 +679,8 @@ export function createProxyCache<
       }
 
       // If neither stored nor memory has the channel and fetching is enabled, fetch it
-      if (options.fetchIfMissing?.channels && guildID) {
-        return fetchers.fetchChannel(channelID, BigInt(guildID), fetch)
+      if (options.fetchIfMissing?.channels) {
+        return fetchers.fetchChannel(channelID, guildID ? BigInt(guildID) : undefined, fetch)
       }
 
       if (options.fetchIfMissing?.channels) {
@@ -704,12 +706,17 @@ export function createProxyCache<
           const guildID = channel.guilId ?? bot.cache.channels.guildIDs.get(channel.id);
 
           if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
-            if (guild) guild.channels.set(channel.id, channel);
+            const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true, true);
+            if (guild) {
+              if (!guild.channels) guild.channels = new Collection<bigint, Channel>();
+              guild.channels.set(channel.id, channel);
+            }
             else
               console.warn(
                 `[CACHE] Can't cache channel(${channel.id}) since guild.channels is enabled but a guild (${guildID}) was not found`
               );
+          } else if ([1, 3].includes(channel.type)) {
+            bot.cache.channels.memory.set(channel.id, channel);
           } else
             console.warn(
               `[CACHE] Can't cache channel(${channel.id}) since guild.channels is enabled but a guild id was not found.`
@@ -717,8 +724,8 @@ export function createProxyCache<
         } else bot.cache.channels.memory.set(channel.id, channel);
       }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.channels)
-        if (options.setItem) await options.setItem("channel", channel);
+      if (options.cacheOutsideMemory?.channels && options.setItem)
+        await options.setItem("channel", channel);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
@@ -750,11 +757,13 @@ export function createProxyCache<
             const guildID = bot.cache.channels.guildIDs.get(channelID);
             const channel =
               bot.cache.guilds.memory.get(guildID!)?.channel ??
-              bot.cache.channels.memory.get(channelID);
+              bot.cache.channels.memory.get(channelID) ??
+              await bot.cache.channels.get(channelID);
             if (channel) {
-              const message = channel.messages.cache.get(messageID);
+              const message = channel.messages.get(messageID);
               if (message) return message;
-            }
+            } else 
+              console.error('cacheInMemory.messages" is enabled but a channel id was not found')
           }
         }
 
@@ -803,6 +812,7 @@ export function createProxyCache<
 
             const channel = await bot.cache.channels.get(message.channelId, message.guildId, true);
             if (channel){
+              if (!channel.messages) channel.messages = new Collection<bigint, Message>();
               channel.messages.set(message.id, message);
               bot.cache.channels.set(channel);
             }
@@ -817,8 +827,8 @@ export function createProxyCache<
         } else bot.cache.messages.memory.set(message.id, message);
       }
       // If user wants non-memory cache, we cache it
-      if (options.cacheOutsideMemory?.messages)
-        if (options.setItem) await options.setItem("message", message);
+      if (options.cacheOutsideMemory?.messages && options.setItem)
+        await options.setItem("message", message);
     },
     delete: async function (id: BigString): Promise<void> {
       // Force id to bigint
