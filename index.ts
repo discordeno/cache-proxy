@@ -767,13 +767,12 @@ export function createProxyCache<
           if (message.channelId)
             bot.cache.messages.channelIDs.set(message.id, message.channelId);
 
-          const guildID = bot.cache.messages.channelIDs.get(message.id);
-          if (guildID) {
-            const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
+          if (message.guildId) {
+            const guild = bot.cache.guilds.memory.get(message.guildId) ?? await fetchers.fetchGuild(message.guildId, true);
             if (guild) guild.messages.set(message.id, message);
             else
               console.warn(
-                `[CACHE] Can't cache message(${message.id}) since guild.messages is enabled but a guild (${guildID}) was not found`
+                `[CACHE] Can't cache message(${message.id}) since guild.messages is enabled but a guild (${message.guildId}) was not found`
               );
           } else
             console.warn(
