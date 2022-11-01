@@ -266,10 +266,10 @@ export function createProxyCache<
 
       return bot.cache.roles.get(roleId);
     },
-    fetchChannel: async (guildId: bigint, channelId: bigint, fetch: boolean | undefined) => {
+    fetchChannel: async (channelId: bigint, guildId: bigint, fetch: boolean | undefined) => {
       if (fetch === false) return;
 
-      if (unavailablesGuilds.has(guildId)) return;
+      if (guildId && unavailablesGuilds.has(guildId)) return;
 
       const channel = await bot.helpers.getChannel(channelId);
 
@@ -678,7 +678,7 @@ export function createProxyCache<
 
       // If neither stored nor memory has the channel and fetching is enabled, fetch it
       if (options.fetchIfMissing?.channels && guildID) {
-        return fetchers.fetchChannel(BigInt(guildID), channelID, fetch)
+        return fetchers.fetchChannel(channelID, BigInt(guildID), fetch)
       }
 
       if (options.fetchIfMissing?.channels) {
@@ -787,7 +787,7 @@ export function createProxyCache<
 
       return;
     },
-    set: async function (message: T["message"]): Promise<void> {
+    set: async function (message: Message /*<T["message"]>*/): Promise<void> {
       if (
         options.shouldCache?.message &&
         !(await options.shouldCache.message(message))
@@ -796,11 +796,26 @@ export function createProxyCache<
 
       // If user wants memory cache, we cache it
       if (options.cacheInMemory?.messages) {
-        if (options.cacheInMemory?.guilds) {
-          if (message.channelId)
-            bot.cache.messages.channelIDs.set(message.id, message.channelId);
-
+        if (options.cacheInMemory?.channels) {
           const channelID = message.channelId ?? bot.cache.messages.channelIDs.get(message.id);
+          if (channelID) {
+            bot.cache.messages.channelIDs.set(message.id, channelID);
+
+            const channel = await bot.cache.channels.get(message.channelId, message.guildId)
+            if (channel) {
+              channel.messages.set(message.id, message);
+              bot.cache.channels.set(channel);
+            }
+            else
+              console.warn(
+                `[CACHE] Can't cache message(${message.id}) since channel.messages is enabled but a channel (${message.channelId}) was not found`
+              );
+          } else 
+            console.warn(
+              `[CACHE] Can't cache message(${message.id}) since channel.messages is enabled but a channel was not found`
+            );
+          
+
           const guildID = message.guildId ?? bot.cache.channels.guildIDs.get(channelID);
           if (guildID) {
             const guild = bot.cache.guilds.memory.get(guildID) ?? await fetchers.fetchGuild(guildID, true);
