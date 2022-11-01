@@ -279,9 +279,9 @@ export function createProxyCache<
 
       return bot.cache.users.get(userId);
     },
-    fetchMessage: async (messageId: bigint, guildId: bigint, channelId: bigint) => {
+    fetchMessage: async (messageId: bigint, channelId: bigint, guildId?: bigint) => {
       if (!options.fetchIfMissing?.messages) return;
-      if (unavailablesGuilds.has(guildId)) return;
+      if (guildId && unavailablesGuilds.has(guildId)) return;
 
       const message = await bot.helpers.getMessage(channelId, messageId);
 
