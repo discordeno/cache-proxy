@@ -754,7 +754,7 @@ export function createProxyCache<
 
       return;
     },
-    set: async function (message: Message /*<T["message"]>*/): Promise<void> {
+    set: async function (message: <T["message"]>): Promise<void> {
       if (
         options.shouldCache?.message &&
         !(await options.shouldCache.message(message))
