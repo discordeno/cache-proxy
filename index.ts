@@ -224,8 +224,6 @@ export function createProxyCache<
   const fetchers = {
     fetchGuild: async (id: bigint, getMemory?: boolean): 
     Promise<NonNullable<Awaited<T["guild"]>> | undefined> => {
-      // Return nothing if we don't want fetching
-      if (!options.fetchIfMissing?.guilds) return;
       // Check if Guild is unavailable
       if (unavailablesGuilds.has(id)) return;
       
@@ -241,7 +239,6 @@ export function createProxyCache<
       return bot.cache.guilds.get(id);
     },
     fetchRole: async (guildId: bigint, roleId: bigint) => {
-      if (!options.fetchIfMissing?.roles) return;
       if (unavailablesGuilds.has(guildId)) return;
 
       const roles = await bot.helpers.getRoles(guildId);
@@ -251,7 +248,6 @@ export function createProxyCache<
       return bot.cache.roles.get(roleId);
     },
     fetchChannel: async (guildId: bigint, channelId: bigint) => {
-      if (!options.fetchIfMissing?.channels) return;
       if (unavailablesGuilds.has(guildId)) return;
 
       const channel = await bot.helpers.getChannel(channelId);
@@ -261,7 +257,6 @@ export function createProxyCache<
       return bot.cache.channels.get(channelId);
     },
     fetchMember: async (guildId: bigint, memberId: bigint) => {
-      if (!options.fetchIfMissing?.members) return;
       if (unavailablesGuilds.has(guildId)) return;
 
       const member = await bot.helpers.getMember(guildId, memberId);
@@ -271,16 +266,13 @@ export function createProxyCache<
       return bot.cache.members.get(memberId, guildId);
     },
     fetchUser: async (userId: bigint) => {
-      if (!options.fetchIfMissing?.users) return;
-
       const user = await bot.helpers.getUser(userId);
 
       await bot.cache.users.set(user)
 
       return bot.cache.users.get(userId);
     },
-    fetchMessage: async (messageId: bigint, channelId: bigint, guildId?: bigint) => {
-      if (!options.fetchIfMissing?.messages) return;
+    fetchMessage: async (messageId: bigint, channelId: bigint, guildId?: bigint | undefined) => {
       if (guildId && unavailablesGuilds.has(guildId)) return;
 
       const message = await bot.helpers.getMessage(channelId, messageId);
@@ -352,12 +344,20 @@ export function createProxyCache<
       if (options.cacheInMemory?.guilds && bot.cache.guilds.memory.has(guildID))
         return bot.cache.guilds.memory.get(guildID);
       // Otherwise try to get from non-memory cache
-      if (!options.cacheOutsideMemory?.guilds || !options.getItem) return;
+      if (options.cacheOutsideMemory?.guilds && options.getItem) {
+        const stored = await options.getItem<T["guild"]>("guild", guildID);
+        if (stored && options.cacheInMemory?.guilds)
+          bot.cache.guilds.memory.set(guildID, stored);
+        return stored;
+      }
 
-      const stored = await options.getItem<T["guild"]>("guild", guildID);
-      if (stored && options.cacheInMemory?.guilds)
-        bot.cache.guilds.memory.set(guildID, stored);
-      return stored;
+      // If neither stored nor memory has the channel and fetching is enabled, fetch it
+      if (options.fetchIfMissing?.guilds) {
+        return fetchers.fetchGuild(BigInt(guildID))
+      }
+
+      // else return nothing
+      return;
     },
     set: async function (guild: T["guild"]): Promise<void> {
       // Should this be cached or not?
@@ -393,14 +393,14 @@ export function createProxyCache<
       if (options.cacheInMemory?.users && bot.cache.users.memory.has(userID))
         return bot.cache.users.memory.get(userID);
       // Otherwise try to get from non-memory cache
-      if (!options.cacheOutsideMemory?.users || !options.getItem) return;
+      if (options.cacheOutsideMemory?.users && options.getItem) {
+        const stored = await options.getItem<T["user"]>("user", userID);
+        if (stored && options.cacheInMemory?.users) {
+          bot.cache.users.memory.set(userID, stored);
+        }
 
-      const stored = await options.getItem<T["user"]>("user", userID);
-      if (stored && options.cacheInMemory?.users) {
-        bot.cache.users.memory.set(userID, stored);
+        if (stored) return stored;
       }
-
-      if (stored) return stored;
 
       if (options.fetchIfMissing?.users) {
         return fetchers.fetchUser(userID);
@@ -454,15 +454,16 @@ export function createProxyCache<
       }
 
       // Otherwise try to get from non-memory cache
-      if (!options.cacheOutsideMemory?.roles || !options.getItem) return;
+      if (options.cacheOutsideMemory?.roles && options.getItem) {
+        const stored = await options.getItem<T["role"]>("role", roleID);
+        if (stored && options.cacheInMemory?.roles) {
+          bot.cache.roles.memory.set(roleID, stored);
+        }
 
-      const stored = await options.getItem<T["role"]>("role", roleID);
-      if (stored && options.cacheInMemory?.roles) {
-        bot.cache.roles.memory.set(roleID, stored);
+        // If its stored, return that
+        if (stored) return stored;
+
       }
-
-      // If its stored, return that
-      if (stored) return stored;
 
       // If neither stored nor memory has the role and fetching is enabled, fetch it
       if (options.fetchIfMissing?.roles && guildId) {
@@ -544,18 +545,18 @@ export function createProxyCache<
       }
 
       // Otherwise try to get from non-memory cache
-      if (!options.cacheOutsideMemory?.members || !options.getItem) return;
+      if (options.cacheOutsideMemory?.members && options.getItem) {
+        const stored = await options.getItem<T["member"]>(
+          "member",
+          memberID,
+          guildID
+        );
+        if (stored && options.cacheInMemory?.members) {
+          bot.cache.members.memory.set(BigInt(`${memberID}${guildId}`), stored);
+        }
 
-      const stored = await options.getItem<T["member"]>(
-        "member",
-        memberID,
-        guildID
-      );
-      if (stored && options.cacheInMemory?.members) {
-        bot.cache.members.memory.set(BigInt(`${memberID}${guildId}`), stored);
+        if (stored) return stored;
       }
-
-      if (stored) return stored;
 
       if (options.fetchIfMissing?.members) {
         fetchers.fetchMember(guildID, memberID);
@@ -637,15 +638,15 @@ export function createProxyCache<
       }
 
       // Otherwise try to get from non-memory cache
-      if (!options.cacheOutsideMemory?.channels || !options.getItem) return;
+      if (options.cacheOutsideMemory?.channels && options.getItem) {
+        const stored = await options.getItem<T["channel"]>("channel", channelID);
+        if (stored && options.cacheInMemory?.channels) {
+          bot.cache.channels.memory.set(channelID, stored);
+        }
 
-      const stored = await options.getItem<T["channel"]>("channel", channelID);
-      if (stored && options.cacheInMemory?.channels) {
-        bot.cache.channels.memory.set(channelID, stored);
+        // If its stored, return that
+        if (stored) return stored;
       }
-
-      // If its stored, return that
-      if (stored) return stored;
 
       // If neither stored nor memory has the channel and fetching is enabled, fetch it
       if (options.fetchIfMissing?.channels && guildID) {
@@ -736,17 +737,17 @@ export function createProxyCache<
       }
 
       // Otherwise try to get from non-memory cache
-      if (!options.cacheOutsideMemory?.messages || !options.getItem) return;
+      if (options.cacheOutsideMemory?.messages && options.getItem) {
+        const stored = await options.getItem<T["message"]>("message", messageID);
+        if (stored && options.cacheInMemory?.messages) {
+          bot.cache.messages.memory.set(messageID, stored);
+        }
 
-      const stored = await options.getItem<T["message"]>("message", messageID);
-      if (stored && options.cacheInMemory?.messages) {
-        bot.cache.messages.memory.set(messageID, stored);
+        if (stored) return stored;
       }
 
-      if (stored) return stored;
-
-      if (options.fetchIfMissing?.messages && channelId && guildId) {
-        return fetchers.fetchMessage(messageID, BigInt(guildId), BigInt(channelId));
+      if (options.fetchIfMissing?.messages && channelId) {
+        return fetchers.fetchMessage(messageID, BigInt(channelId), guildId ? BigInt(guildId) : undefined);
       }
 
       if (options.fetchIfMissing?.messages) {
