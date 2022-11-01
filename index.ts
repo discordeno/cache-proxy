@@ -767,7 +767,7 @@ export function createProxyCache<
           if (message.channelId)
             bot.cache.messages.channelIDs.set(message.id, message.channelId);
 
-          const channelId = bot.cache.messages.channelIDs.get(message.id);
+          const channelId = message.channelId ?? bot.cache.messages.channelIDs.get(message.id);
           if (channelId) {
             const channel = await bot.cache.channels.get(channelId) ?? await fetchers.fetchChannel(channelId,message.guildId);
             if (channel){
