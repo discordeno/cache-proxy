@@ -214,7 +214,6 @@ export function setupCacheEdits<B extends Bot>(bot: BotWithProxyCache<ProxyCache
 
   bot.handlers.GUILD_MEMBER_UPDATE = async function (_, data, shardId) {
     const payload = data.d as DiscordGuildMemberUpdate;
-
     const member = bot.transformers.member(bot, payload, BigInt(payload.guild_id), BigInt(payload.user.id));
     const oldMember = await bot.cache.members.get(BigInt(payload.user.id), BigInt(payload.guild_id), false);
 
