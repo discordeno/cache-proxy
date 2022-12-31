@@ -21,6 +21,7 @@ export function setupCacheRemovals<B extends Bot>(
     GUILD_MEMBER_REMOVE,
     GUILD_ROLE_DELETE,
     MESSAGE_DELETE_BULK,
+    THREAD_DELETE
   } = bot.handlers;
 
   bot.handlers.GUILD_DELETE = function (_, data, shardId) {
@@ -115,5 +116,14 @@ export function setupCacheRemovals<B extends Bot>(
     bot.cache.options.bulk?.removeRole?.(id);
 
     GUILD_ROLE_DELETE(bot, data, shardId);
+  };
+
+  bot.handlers.THREAD_DELETE = function (_, data, shardId) {
+    const payload = data.d as DiscordChannel;
+    // HANDLER BEFORE DELETING, BECAUSE HANDLER RUNS TRANSFORMER WHICH RE CACHES
+    THREAD_DELETE(bot, data, shardId);
+
+    const id = bot.transformers.snowflake(payload.id);
+    bot.cache.options.bulk?.removeChannel?.(id);
   };
 }
