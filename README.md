@@ -7,3 +7,5 @@ different cache types.
 
 2. Persistent Cache (Slower than memory, but still crazy fast. Unless you
    restart your cache, nothing is lost.)
+
+### Note: This repo is not maintained anymore and lacks updates, please use [dd-cache-proxy](https://github.com/AwesomeStickz/dd-cache-proxy) instead!
